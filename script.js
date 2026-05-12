@@ -1,6 +1,7 @@
 // DPWH Quality Assurance Inventory Script
 
 let chart;
+let categories = ['Chemicals', 'Soil Agg & Concrete & Asph Alt', 'Asphalt', 'Wood', 'Other'];
 
 document.addEventListener('DOMContentLoaded', function() {
     loadInventory();
@@ -20,6 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
             loadInventory();
         }
     });
+
+    // Toolbar buttons
+    document.getElementById('add-material-btn').addEventListener('click', scrollToAddMaterial);
+    document.getElementById('calendar-btn').addEventListener('click', toggleCalendarView);
+    document.getElementById('graph-btn').addEventListener('click', toggleGraphView);
+
+    // Add category button
+    document.getElementById('add-category-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        addNewCategory();
+    });
 });
 
 function loadInventory() {
@@ -37,6 +49,7 @@ function loadInventory() {
             <td>${item.status}</td>
             <td>${item.maintenanceExpiry || 'N/A'}</td>
             <td>${item.calibrationSchedule || 'N/A'}</td>
+            <td>${item.remarks ? '<strong>' + item.remarks.substring(0, 20) + '...</strong>' : 'N/A'}</td>
             <td><button class="delete-btn" onclick="deleteMaterial('${item.id}')">Delete</button></td>
         `;
         tbody.appendChild(row);
@@ -51,6 +64,7 @@ function addMaterial() {
     const status = document.getElementById('item-status').value;
     const maintenanceExpiry = document.getElementById('maintenance-expiry').value;
     const calibrationSchedule = document.getElementById('calibration-schedule').value;
+    const remarks = document.getElementById('remarks').value;
 
     if (!id || !name || !category || !quantity || !status) {
         alert('Please fill in all required fields');
@@ -64,7 +78,7 @@ function addMaterial() {
         return;
     }
 
-    inventory.push({ id, name, category, quantity: parseInt(quantity), status, maintenanceExpiry, calibrationSchedule });
+    inventory.push({ id, name, category, quantity: parseInt(quantity), status, maintenanceExpiry, calibrationSchedule, remarks });
     saveInventory(inventory);
     loadInventory();
     updateChart();
@@ -105,6 +119,7 @@ function searchInventory() {
             <td>${item.status}</td>
             <td>${item.maintenanceExpiry || 'N/A'}</td>
             <td>${item.calibrationSchedule || 'N/A'}</td>
+            <td>${item.remarks ? '<strong>' + item.remarks.substring(0, 20) + '...</strong>' : 'N/A'}</td>
             <td><button class="delete-btn" onclick="deleteMaterial('${item.id}')">Delete</button></td>
         `;
         tbody.appendChild(row);
@@ -198,8 +213,11 @@ function checkNotifications() {
     if (notifications.length > 0) {
         notificationBar.innerHTML = notifications.join(' | ');
         notificationBar.style.display = 'block';
+        // Also update the toolbar notification area
+        document.getElementById('notification-area').innerHTML = '<strong>⚠️ ' + notifications.length + ' Alert(s)</strong>';
     } else {
         notificationBar.style.display = 'none';
+        document.getElementById('notification-area').innerHTML = '✓ All items up to date';
     }
 }
 
@@ -210,4 +228,46 @@ function getInventory() {
 
 function saveInventory(inventory) {
     localStorage.setItem('dpwh-inventory', JSON.stringify(inventory));
+}
+
+function addNewCategory() {
+    // Create a simple input dialog since prompt() may not be available
+    try {
+        const categoryName = prompt('Enter new category name:') || '';
+        
+        if (categoryName && categoryName.trim() !== '') {
+            if (!categories.includes(categoryName)) {
+                categories.push(categoryName);
+                // Add to select dropdown
+                const select = document.getElementById('item-category');
+                const option = document.createElement('option');
+                option.value = categoryName;
+                option.textContent = categoryName;
+                select.appendChild(option);
+                console.log('Category "' + categoryName + '" added successfully!');
+            } else {
+                console.log('This category already exists.');
+            }
+        }
+    } catch(e) {
+        console.log('Could not add category. Please try again.');
+    }
+}
+
+function scrollToAddMaterial() {
+    document.getElementById('add-material').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleCalendarView() {
+    alert('Calendar view is coming soon!');
+}
+
+function toggleGraphView() {
+    const analyticsSection = document.getElementById('analytics');
+    if (analyticsSection.style.display === 'none') {
+        analyticsSection.style.display = 'block';
+        analyticsSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        analyticsSection.style.display = 'none';
+    }
 }
