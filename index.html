@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DPWH Quality Assurance Inventory</title>
+    <title>DPWH Quality Assurance Section</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Georgia:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -11,9 +11,18 @@
     <div class="page-shell">
         <header class="topbar">
             <div class="brand">
-                <div class="brand-mark">QA</div>
+                <div class="brand-mark logo-mark">
+                    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="DPWH Logo">
+                        <circle cx="60" cy="60" r="56" fill="#0f2960"/>
+                        <path d="M30 18h60v12H30z" fill="#ffffff"/>
+                        <path d="M42 36h36v12H42z" fill="#ffffff"/>
+                        <path d="M50 20h20v68H50z" fill="#ff6f1f"/>
+                        <path d="M48 88h24v10H48z" fill="#ffffff" opacity="0.85"/>
+                        <path d="M60 24 L74 50 L46 50 Z" fill="#ff6f1f" opacity="0.9"/>
+                    </svg>
+                </div>
                 <div class="brand-copy">
-                    <h1>DPWH Quality Assurance</h1>
+                    <h1>DPWH Quality Assurance Section</h1>
                     <p>Material Management System</p>
                 </div>
             </div>
@@ -21,10 +30,11 @@
             <div class="nav-links">
                 <button class="nav-tab active">Dashboard</button>
                 <button class="nav-tab">Materials</button>
+                <button class="nav-tab">History</button>
             </div>
 
             <div class="top-actions">
-                <button id="add-material-btn" class="btn btn-primary">+ Add Material</button>
+                <button id="add-material-btn" class="nav-tab add-material-tab">+ Add Material</button>
                 <button id="calendar-btn" class="icon-btn" aria-label="Calendar">📅</button>
                 <button id="graph-btn" class="icon-btn" aria-label="Analytics">📊</button>
                 <button class="icon-btn notification-btn" aria-label="Notifications">

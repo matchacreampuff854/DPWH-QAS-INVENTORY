@@ -67,6 +67,17 @@ body {
     box-shadow: 0 16px 40px rgba(15, 79, 168, 0.18);
 }
 
+.brand-mark.logo-mark {
+    background: transparent;
+    box-shadow: none;
+}
+
+.brand-mark.logo-mark svg {
+    width: 56px;
+    height: 56px;
+    display: block;
+}
+
 .brand-copy h1 {
     font-size: 1.75rem;
     margin-bottom: 6px;
@@ -105,6 +116,21 @@ body {
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
+}
+
+.top-actions .nav-tab {
+    min-width: auto;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, rgba(255, 111, 31, 0.16), rgba(15, 79, 168, 0.12));
+    color: var(--blue);
+    font-weight: 600;
+}
+
+.top-actions .nav-tab:hover,
+.top-actions .nav-tab.active {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(15, 79, 168, 0.12);
+    background: linear-gradient(135deg, rgba(15, 79, 168, 0.12), rgba(255, 111, 31, 0.18));
 }
 
 .icon-btn {
