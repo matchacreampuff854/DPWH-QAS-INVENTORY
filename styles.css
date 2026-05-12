@@ -72,10 +72,12 @@ body {
     box-shadow: none;
 }
 
-.brand-mark.logo-mark svg {
+.brand-mark.logo-mark img {
     width: 56px;
     height: 56px;
+    object-fit: contain;
     display: block;
+    border-radius: 16px;
 }
 
 .brand-copy h1 {
