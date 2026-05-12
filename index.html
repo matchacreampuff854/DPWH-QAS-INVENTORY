@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPWH Quality Assurance Inventory</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="notification-bar" class="notification-bar">
+        <!-- Notifications will be populated here -->
+    </div>
+    <header>
+        <div class="header-content">
+            <h1>DPWH Quality Assurance Office Inventory</h1>
+            <p>Manage and monitor your materials efficiently</p>
+        </div>
+    </header>
+    <main>
+        <section id="inventory" class="section">
+            <div class="container">
+                <h2>Material Inventory</h2>
+                <div id="search-container" class="search-container">
+                    <input type="text" id="search-bar" placeholder="Search by Item ID, Name, or Category">
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+                <div id="add-material" class="card">
+                    <h3>Add New Material</h3>
+                    <form id="add-form" class="form-grid">
+                        <div class="form-group">
+                            <label for="item-id">Item ID</label>
+                            <input type="text" id="item-id" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-name">Item Name</label>
+                            <input type="text" id="item-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-category">Category</label>
+                            <select id="item-category" required>
+                                <option value="">Select Category</option>
+                                <option value="Concrete">Concrete</option>
+                                <option value="Steel">Steel</option>
+                                <option value="Asphalt">Asphalt</option>
+                                <option value="Wood">Wood</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-quantity">Quantity</label>
+                            <input type="number" id="item-quantity" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-status">Status</label>
+                            <select id="item-status" required>
+                                <option value="functioning">Functioning</option>
+                                <option value="not-functioning">Not Functioning</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenance-expiry">Maintenance Expiry Date</label>
+                            <input type="date" id="maintenance-expiry">
+                        </div>
+                        <div class="form-group">
+                            <label for="calibration-schedule">Next Calibration Date</label>
+                            <input type="date" id="calibration-schedule">
+                        </div>
+                        <button type="submit" class="btn btn-success">Add Material</button>
+                    </form>
+                </div>
+                <div id="inventory-list" class="card">
+                    <h3>Current Inventory</h3>
+                    <div class="table-container">
+                        <table id="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th>Maintenance Expiry</th>
+                                    <th>Calibration Schedule</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body">
+                                <!-- Inventory items will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="analytics" class="section">
+            <div class="container">
+                <h2>Analytics</h2>
+                <div id="charts" class="card">
+                    <canvas id="category-chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
