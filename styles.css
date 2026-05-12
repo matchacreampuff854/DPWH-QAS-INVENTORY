@@ -23,20 +23,30 @@ html {
 
 body {
     font-family: 'Georgia', serif;
-    background: radial-gradient(circle at top left, rgba(255, 111, 31, 0.12), transparent 35%),
-                linear-gradient(180deg, #ffffff 0%, #eef4fb 100%);
+    background:
+        radial-gradient(circle at top left, rgba(255, 111, 31, 0.24), transparent 24%),
+        radial-gradient(circle at top right, rgba(255, 111, 31, 0.14), transparent 18%),
+        linear-gradient(160deg, #071a36 0%, #0f4fa8 44%, #f9aa6e 92%);
     color: var(--text);
     min-height: 100vh;
     line-height: 1.6;
 }
 
 .page-shell {
+    width: min(100%, 1400px);
     max-width: 1400px;
-    margin: 0 auto;
+    margin: 24px auto;
     padding: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 32px;
+    box-shadow: 0 30px 80px rgba(15, 79, 168, 0.16);
+    border: 1px solid rgba(255, 111, 31, 0.08);
+    overflow: hidden;
 }
 
 .topbar {
+    width: 100%;
+    padding: 24px 28px;
     display: grid;
     grid-template-columns: 1.5fr 1fr auto;
     align-items: center;
@@ -68,13 +78,18 @@ body {
 }
 
 .brand-mark.logo-mark {
+    width: 72px;
+    height: 72px;
+    padding: 6px;
     background: transparent;
     box-shadow: none;
 }
 
 .brand-mark.logo-mark img {
-    width: 56px;
-    height: 56px;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
     display: block;
     border-radius: 16px;
