@@ -1570,6 +1570,7 @@ tr:hover {
         background: #f5f5f5;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        line-height: 1.2;
     }
 
     .print-checklist tbody td {
@@ -1577,6 +1578,7 @@ tr:hover {
         padding: 3px 4px;
         vertical-align: middle;
         text-align: center;
+        word-wrap: break-word;
     }
 
     .print-checklist tbody td:first-child {
