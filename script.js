@@ -1,15 +1,18 @@
 // DPWH Quality Assurance Inventory Script
 
-let chart;
 let usageChart;
 let qualityChart;
 let categories = ['Chemicals', 'Soil Agg & Concrete & Asph Alt', 'Asphalt', 'Wood', 'Other'];
+let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
 
 document.addEventListener('DOMContentLoaded', function() {
+    loadUnits();
+    populateUnitSelect();
     loadInventory();
     updateDashboard();
     updateCharts();
     updateRecentActivity();
+    checkNotifications();
 
     document.getElementById('add-form').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -32,7 +35,65 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         addNewCategory();
     });
+
+    document.getElementById('add-unit-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        addNewUnit();
+    });
 });
+
+function loadUnits() {
+    const saved = localStorage.getItem('dpwh-units');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length) {
+                units = parsed;
+            }
+        } catch (e) {
+            console.error('Failed to load units', e);
+        }
+    }
+}
+
+function saveUnits() {
+    localStorage.setItem('dpwh-units', JSON.stringify(units));
+}
+
+function populateUnitSelect() {
+    const select = document.getElementById('item-unit');
+    if (!select) return;
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Select Unit</option>';
+    units.forEach(u => {
+        const option = document.createElement('option');
+        option.value = u;
+        option.textContent = u;
+        select.appendChild(option);
+    });
+    if (currentValue && units.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+function addNewUnit() {
+    try {
+        const unitName = prompt('Enter new unit of measure:') || '';
+        if (unitName && unitName.trim() !== '') {
+            const normalized = unitName.trim().toLowerCase();
+            if (!units.includes(normalized)) {
+                units.push(normalized);
+                saveUnits();
+                populateUnitSelect();
+                document.getElementById('item-unit').value = normalized;
+            } else {
+                alert('This unit already exists.');
+            }
+        }
+    } catch (e) {
+        console.log('Could not add unit. Please try again.');
+    }
+}
 
 function loadInventory() {
     const inventory = getInventory();
@@ -45,7 +106,7 @@ function loadInventory() {
             <td>${item.id}</td>
             <td>${item.name}</td>
             <td>${item.category}</td>
-            <td>${item.quantity}</td>
+            <td>${item.unit || item.quantity || 'N/A'}</td>
             <td>${item.status}</td>
             <td>${item.maintenanceExpiry || 'N/A'}</td>
             <td>${item.calibrationSchedule || 'N/A'}</td>
@@ -57,16 +118,16 @@ function loadInventory() {
 }
 
 function addMaterial() {
-    const id = document.getElementById('item-id').value;
-    const name = document.getElementById('item-name').value;
+    const id = document.getElementById('item-id').value.trim();
+    const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
-    const quantity = document.getElementById('item-quantity').value;
+    const unit = document.getElementById('item-unit').value;
     const status = document.getElementById('item-status').value;
     const maintenanceExpiry = document.getElementById('maintenance-expiry').value;
     const calibrationSchedule = document.getElementById('calibration-schedule').value;
-    const remarks = document.getElementById('remarks').value;
+    const remarks = document.getElementById('remarks').value.trim();
 
-    if (!id || !name || !category || !quantity || !status) {
+    if (!id || !name || !category || !unit || !status) {
         alert('Please fill in all required fields');
         return;
     }
@@ -78,7 +139,7 @@ function addMaterial() {
         return;
     }
 
-    inventory.push({ id, name, category, quantity: parseInt(quantity), status, maintenanceExpiry, calibrationSchedule, remarks });
+    inventory.push({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks });
     saveInventory(inventory);
     loadInventory();
     updateDashboard();
@@ -262,7 +323,7 @@ function checkNotifications() {
     const inventory = getInventory();
     const notifications = [];
     const today = new Date();
-    const warningDays = 30; // Notify 30 days in advance
+    const warningDays = 30;
 
     inventory.forEach(item => {
         if (item.maintenanceExpiry) {
@@ -299,7 +360,9 @@ function checkNotifications() {
     }
 
     if (notificationArea) {
-        notificationArea.innerHTML = notifications.length > 0 ? `<strong>⚠️ ${notifications.length} Alert(s)</strong>` : '✓ All items up to date';
+        notificationArea.innerHTML = notifications.length > 0
+            ? `<strong>⚠️ ${notifications.length} Alert(s)</strong>`
+            : '✓ All items up to date';
     }
 }
 
@@ -370,7 +433,7 @@ function searchInventory() {
             <td>${item.id}</td>
             <td>${item.name}</td>
             <td>${item.category}</td>
-            <td>${item.quantity}</td>
+            <td>${item.unit || item.quantity || 'N/A'}</td>
             <td>${item.status}</td>
             <td>${item.maintenanceExpiry || 'N/A'}</td>
             <td>${item.calibrationSchedule || 'N/A'}</td>
@@ -379,124 +442,4 @@ function searchInventory() {
         `;
         tbody.appendChild(row);
     });
-}
-
-function showHistory() {
-    const historySection = document.getElementById('history-section');
-    if (!historySection) {
-        return;
-    }
-
-    const shouldShow = historySection.style.display === 'none';
-    historySection.style.display = shouldShow ? 'block' : 'none';
-
-    if (shouldShow) {
-        historySection.scrollIntoView({ behavior: 'smooth' });
-        setActiveTab('history-btn');
-    } else {
-        setActiveTab('dashboard-tab');
-    }
-}
-
-function setActiveTab(tabId) {
-    const tabs = document.querySelectorAll('.nav-tab');
-    tabs.forEach(tab => {
-        tab.classList.toggle('active', tab.id === tabId);
-    });
-
-    const historySection = document.getElementById('history-section');
-    if (historySection) {
-        historySection.style.display = tabId === 'history-btn' ? 'block' : 'none';
-    }
-}
-
-function checkNotifications() {
-    const inventory = getInventory();
-    const notifications = [];
-    const today = new Date();
-    const warningDays = 30; // Notify 30 days in advance
-
-    inventory.forEach(item => {
-        if (item.maintenanceExpiry) {
-            const expiryDate = new Date(item.maintenanceExpiry);
-            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-            if (daysUntilExpiry <= warningDays && daysUntilExpiry >= 0) {
-                notifications.push(`Maintenance for ${item.name} (ID: ${item.id}) expires in ${daysUntilExpiry} days`);
-            } else if (daysUntilExpiry < 0) {
-                notifications.push(`Maintenance for ${item.name} (ID: ${item.id}) has expired`);
-            }
-        }
-
-        if (item.calibrationSchedule) {
-            const calibrationDate = new Date(item.calibrationSchedule);
-            const daysUntilCalibration = Math.ceil((calibrationDate - today) / (1000 * 60 * 60 * 24));
-            if (daysUntilCalibration <= warningDays && daysUntilCalibration >= 0) {
-                notifications.push(`Calibration for ${item.name} (ID: ${item.id}) scheduled in ${daysUntilCalibration} days`);
-            } else if (daysUntilCalibration < 0) {
-                notifications.push(`Calibration for ${item.name} (ID: ${item.id}) is overdue`);
-            }
-        }
-    });
-
-    const notificationBar = document.getElementById('notification-bar');
-    if (notifications.length > 0) {
-        notificationBar.innerHTML = notifications.join(' | ');
-        notificationBar.style.display = 'block';
-        // Also update the toolbar notification area
-        document.getElementById('notification-area').innerHTML = '<strong>⚠️ ' + notifications.length + ' Alert(s)</strong>';
-    } else {
-        notificationBar.style.display = 'none';
-        document.getElementById('notification-area').innerHTML = '✓ All items up to date';
-    }
-}
-
-function getInventory() {
-    const inventory = localStorage.getItem('dpwh-inventory');
-    return inventory ? JSON.parse(inventory) : [];
-}
-
-function saveInventory(inventory) {
-    localStorage.setItem('dpwh-inventory', JSON.stringify(inventory));
-}
-
-function addNewCategory() {
-    // Create a simple input dialog since prompt() may not be available
-    try {
-        const categoryName = prompt('Enter new category name:') || '';
-        
-        if (categoryName && categoryName.trim() !== '') {
-            if (!categories.includes(categoryName)) {
-                categories.push(categoryName);
-                // Add to select dropdown
-                const select = document.getElementById('item-category');
-                const option = document.createElement('option');
-                option.value = categoryName;
-                option.textContent = categoryName;
-                select.appendChild(option);
-                console.log('Category "' + categoryName + '" added successfully!');
-            } else {
-                console.log('This category already exists.');
-            }
-        }
-    } catch(e) {
-        console.log('Could not add category. Please try again.');
-    }
-}
-
-function scrollToAddMaterial() {
-    document.getElementById('add-material').scrollIntoView({ behavior: 'smooth' });
-}
-
-function toggleCalendarView() {
-    alert('Calendar view is coming soon!');
-}
-
-function toggleGraphView() {
-    const analyticsSection = document.getElementById('analytics');
-    if (analyticsSection.style.display === 'none') {
-        analyticsSection.style.display = 'block';
-        analyticsSection.scrollIntoView({ behavior: 'smooth' });
-    } else {
-        analyticsSection.style.display = 'none';
-    }
 }

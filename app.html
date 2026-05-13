@@ -123,8 +123,20 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="item-quantity">Quantity</label>
-                                <input type="number" id="item-quantity" required>
+                                <label for="item-unit">Unit of Measure</label>
+                                <div class="unit-input-group">
+                                    <select id="item-unit" required>
+                                        <option value="">Select Unit</option>
+                                        <option value="pc">pc</option>
+                                        <option value="set">set</option>
+                                        <option value="sack">sack</option>
+                                        <option value="unit">unit</option>
+                                        <option value="bot">bot</option>
+                                        <option value="bag">bag</option>
+                                        <option value="pair">pair</option>
+                                    </select>
+                                    <button type="button" id="add-unit-btn" class="btn btn-secondary btn-add-unit" title="Add new unit">+</button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="item-status">Status</label>
@@ -158,7 +170,7 @@
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Category</th>
-                                        <th>Quantity</th>
+                                        <th>Unit of Measure</th>
                                         <th>Status</th>
                                         <th>Maintenance Expiry</th>
                                         <th>Calibration Schedule</th>
