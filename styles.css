@@ -1189,17 +1189,18 @@ tr:hover {
 
     .form-meta {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: flex-start;
         gap: 16px;
         font-size: 9pt;
         border-bottom: 1.5px solid #333;
         padding-bottom: 8px;
         margin-bottom: 10px;
+        flex-wrap: wrap;
     }
 
     .form-left {
-        flex: 1.6;
+        flex: 1 1 100%;
         min-width: 0;
     }
 
@@ -1208,11 +1209,12 @@ tr:hover {
         display: flex;
         align-items: baseline;
         gap: 4px;
-        white-space: nowrap;
+        white-space: normal;
+        flex-wrap: wrap;
     }
 
     .form-left strong {
-        white-space: nowrap;
+        white-space: normal;
         flex-shrink: 0;
     }
 
@@ -1241,6 +1243,11 @@ tr:hover {
         font-size: 8.5pt;
     }
 
+    .print-template {
+        width: 100%;
+        max-width: 100%;
+    }
+
     .print-checklist {
         width: 100%;
         border-collapse: collapse;
@@ -1258,6 +1265,10 @@ tr:hover {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
         line-height: 1.2;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: break-word;
+        hyphens: auto;
     }
 
     .print-checklist tbody td {
@@ -1265,7 +1276,11 @@ tr:hover {
         padding: 4px 4px;
         vertical-align: middle;
         text-align: center;
+        white-space: normal;
         word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: auto;
     }
 
     .print-checklist tbody td:first-child {
