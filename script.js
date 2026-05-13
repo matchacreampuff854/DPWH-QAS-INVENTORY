@@ -923,7 +923,10 @@ function getPendingTasks() {
 function updateCalendarBadge() {
     const badge = document.getElementById('calendar-badge');
     if (!badge) return;
-    const count = getPendingTasks().length;
+    const pendingTasks = getPendingTasks();
+    const currentYear = calCurrentDate.getFullYear();
+    const currentMonth = calCurrentDate.getMonth();
+    const count = pendingTasks.filter(t => t.date.getFullYear() === currentYear && t.date.getMonth() === currentMonth).length;
     badge.textContent = count;
     badge.style.display = count > 0 ? 'inline-flex' : 'none';
 }
@@ -987,6 +990,7 @@ function renderCalendar() {
     }
 
     grid.innerHTML = html;
+    updateCalendarBadge();
 }
 
 function selectCalendarDay(year, month, day) {
