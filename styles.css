@@ -95,8 +95,10 @@ body {
 }
 
 .landing-shell {
-    max-width: 1200px;
-    padding: 30px;
+    max-width: 1500px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 20px 24px;
 }
 
 .landing-topbar {
