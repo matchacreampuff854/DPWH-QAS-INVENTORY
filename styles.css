@@ -33,12 +33,12 @@ body {
 }
 
 .page-shell {
-    width: min(100%, 1400px);
-    max-width: 1400px;
-    margin: 24px auto;
-    padding: 24px;
+    width: 97%;
+    max-width: 1600px;
+    margin: 16px auto;
+    padding: 16px;
     background: rgba(255, 255, 255, 0.94);
-    border-radius: 32px;
+    border-radius: 24px;
     box-shadow: 0 30px 80px rgba(15, 79, 168, 0.16);
     border: 1px solid rgba(255, 111, 31, 0.08);
     overflow: hidden;
