@@ -383,6 +383,300 @@ a.brand-mark.logo-mark {
     box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.12);
 }
 
+.notification-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.15);
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 90px;
+    right: 24px;
+    width: 380px;
+    max-height: 520px;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgba(15, 79, 168, 0.14);
+    border: 1px solid rgba(15, 79, 168, 0.08);
+    padding: 20px;
+    z-index: 900;
+    overflow-y: auto;
+}
+
+.notification-dropdown-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid rgba(15, 79, 168, 0.08);
+}
+
+.notification-dropdown-header h3 {
+    font-size: 1.05rem;
+    color: var(--blue);
+    margin: 0;
+}
+
+.week-range {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 20px 0;
+}
+
+.notification-group {
+    margin-bottom: 8px;
+}
+
+.notification-group-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    background: #f3f7fd;
+    border-radius: 10px;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: #f8fbff;
+    border: 1px solid rgba(15, 79, 168, 0.06);
+    transition: background 0.15s ease;
+}
+
+.notification-item:hover {
+    background: #eaf1fb;
+}
+
+.notification-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--blue);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.notification-item label {
+    flex: 1;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.notification-item.completed label {
+    text-decoration: line-through;
+    opacity: 0.55;
+}
+
+.notification-item .notif-meta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.calendar-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.15);
+}
+
+.calendar-popup {
+    position: absolute;
+    top: 90px;
+    right: 24px;
+    width: 360px;
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgba(15, 79, 168, 0.14);
+    border: 1px solid rgba(15, 79, 168, 0.08);
+    padding: 20px;
+    z-index: 900;
+}
+
+.calendar-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.calendar-popup-header h3 {
+    font-size: 1.05rem;
+    color: var(--blue);
+    margin: 0;
+}
+
+.calendar-nav {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: none;
+    background: #f3f7fd;
+    color: var(--blue);
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+.calendar-nav:hover {
+    background: #e3eefc;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.cal-day-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 6px 0;
+    text-transform: uppercase;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    position: relative;
+    padding: 4px;
+}
+
+.cal-day:hover {
+    background: #f3f7fd;
+}
+
+.cal-day.other-month {
+    color: #b0b8c4;
+}
+
+.cal-day.selected {
+    background: linear-gradient(135deg, var(--orange), var(--blue));
+    color: #fff;
+    font-weight: 700;
+}
+
+.cal-day.has-tasks::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ff4d4f;
+    position: absolute;
+    bottom: 4px;
+}
+
+.cal-day.selected.has-tasks::after {
+    background: #fff;
+}
+
+.calendar-tasks {
+    border-top: 1.5px solid rgba(15, 79, 168, 0.08);
+    padding-top: 14px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.cal-task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: #f8fbff;
+    margin-bottom: 8px;
+    border: 1px solid rgba(15, 79, 168, 0.06);
+}
+
+.cal-task-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--blue);
+    cursor: pointer;
+}
+
+.cal-task-item label {
+    flex: 1;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.cal-task-item.completed label {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.cal-no-tasks {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 10px 0;
+}
+
 .dashboard {
     display: grid;
     gap: 28px;
@@ -1117,8 +1411,8 @@ tr:hover {
 
 @media print {
     @page {
-        size: A4 portrait;
-        margin: 10mm 12mm;
+        size: A4 landscape;
+        margin: 12mm;
     }
 
     body {
@@ -1189,7 +1483,7 @@ tr:hover {
 
     .form-meta {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
         font-size: 9pt;
@@ -1200,7 +1494,7 @@ tr:hover {
     }
 
     .form-left {
-        flex: 1 1 100%;
+        flex: 1.6;
         min-width: 0;
     }
 
@@ -1209,38 +1503,35 @@ tr:hover {
         display: flex;
         align-items: baseline;
         gap: 4px;
-        white-space: normal;
-        flex-wrap: wrap;
+        white-space: nowrap;
     }
 
     .form-left strong {
-        white-space: normal;
+        white-space: nowrap;
         flex-shrink: 0;
     }
 
     .form-left .blank-line {
         display: inline-block;
-        flex: 1 1 auto;
+        flex: 1;
         border-bottom: 1px solid #333;
-        min-width: 180px;
-        height: 12px;
+        min-width: 120px;
+        height: 14px;
     }
 
     .form-right {
         flex: 1;
         text-align: center;
-        padding-left: 10px;
     }
 
     .form-right .dept-name {
         font-weight: 700;
-        font-size: 9.5pt;
+        font-size: 10pt;
         margin: 0;
     }
 
     .form-right p {
         margin: 1px 0;
-        font-size: 8.5pt;
     }
 
     .print-template {
@@ -1251,13 +1542,12 @@ tr:hover {
     .print-checklist {
         width: 100%;
         border-collapse: collapse;
-        font-size: 8pt;
-        table-layout: fixed;
+        font-size: 9pt;
     }
 
     .print-checklist thead th {
         border: 1.5px solid #000;
-        padding: 5px 3px;
+        padding: 6px 4px;
         text-align: center;
         vertical-align: middle;
         font-weight: 700;
@@ -1265,22 +1555,14 @@ tr:hover {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
         line-height: 1.2;
-        white-space: normal;
-        word-break: normal;
-        overflow-wrap: break-word;
-        hyphens: auto;
     }
 
     .print-checklist tbody td {
         border: 1px solid #000;
-        padding: 4px 4px;
+        padding: 5px 6px;
         vertical-align: middle;
         text-align: center;
-        white-space: normal;
         word-wrap: break-word;
-        overflow-wrap: break-word;
-        word-break: normal;
-        hyphens: auto;
     }
 
     .print-checklist tbody td:first-child {
@@ -1292,15 +1574,14 @@ tr:hover {
         background: #eaeaea;
         font-weight: 700;
         text-align: left;
-        padding: 4px 5px;
+        padding: 5px 6px;
         border: 1px solid #000;
-        font-size: 8.5pt;
     }
 
     .print-checklist .subcategory-header {
         font-weight: 700;
         text-align: left;
-        padding: 3px 5px;
+        padding: 4px 6px;
         border: 1px solid #000;
         background: #f9f9f9;
     }
