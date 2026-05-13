@@ -237,6 +237,11 @@ body {
     box-shadow: none;
 }
 
+a.brand-mark.logo-mark {
+    text-decoration: none;
+    color: inherit;
+}
+
 .brand-mark.logo-mark img {
     max-width: 100%;
     max-height: 100%;
