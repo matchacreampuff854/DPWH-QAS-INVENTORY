@@ -689,6 +689,12 @@ canvas {
     margin-bottom: 24px;
 }
 
+.records-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .records-topbar h2 {
     font-size: 1.5rem;
     color: var(--blue);
@@ -960,6 +966,11 @@ canvas {
     margin-top: 8px;
 }
 
+/* Print Template (hidden on screen) */
+.print-template {
+    display: none;
+}
+
 @media (max-width: 1120px) {
     .dashboard-grid,
     .inventory-layout,
@@ -1102,6 +1113,167 @@ tr:hover {
 #category-chart {
     max-width: 100%;
     height: 400px;
+}
+
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 12mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        margin: 0;
+        padding: 0;
+        font-size: 10pt;
+    }
+
+    .page-shell {
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        background: #ffffff;
+        max-width: 100%;
+    }
+
+    .topbar,
+    .metrics-grid,
+    .dashboard-grid,
+    .inventory-layout,
+    .records-toolbar,
+    .records-actions,
+    .records-topbar,
+    .action-btns,
+    .modal,
+    .activity-panel,
+    #add-material,
+    #inventory-list,
+    #search-container,
+    .notification-dot,
+    .records-table-wrapper,
+    .records-table.modern-records {
+        display: none !important;
+    }
+
+    .records-section {
+        display: block !important;
+    }
+
+    .records-card {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        border-radius: 0;
+    }
+
+    /* Show print template */
+    .print-template {
+        display: block !important;
+    }
+
+    .form-header {
+        margin-bottom: 14px;
+    }
+
+    .form-header h1 {
+        text-align: center;
+        font-size: 13pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin: 0 0 10px;
+        letter-spacing: 0.5px;
+    }
+
+    .form-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        font-size: 9pt;
+        border-bottom: 1.5px solid #333;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+    }
+
+    .form-left {
+        flex: 1;
+    }
+
+    .form-left p {
+        margin: 2px 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .form-left .blank-line {
+        display: inline-block;
+        flex: 1;
+        border-bottom: 1px solid #333;
+        min-width: 120px;
+        height: 14px;
+    }
+
+    .form-right {
+        flex: 1;
+        text-align: center;
+    }
+
+    .form-right .dept-name {
+        font-weight: 700;
+        font-size: 10pt;
+        margin: 0;
+    }
+
+    .form-right p {
+        margin: 1px 0;
+    }
+
+    .print-checklist {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+    }
+
+    .print-checklist thead th {
+        border: 1.5px solid #000;
+        padding: 6px 4px;
+        text-align: center;
+        vertical-align: middle;
+        font-weight: 700;
+        background: #f5f5f5;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .print-checklist tbody td {
+        border: 1px solid #000;
+        padding: 5px 6px;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .print-checklist tbody td:first-child {
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .print-checklist .category-header {
+        background: #eaeaea;
+        font-weight: 700;
+        text-align: left;
+        padding: 5px 6px;
+        border: 1px solid #000;
+    }
+
+    .print-checklist .subcategory-header {
+        font-weight: 700;
+        text-align: left;
+        padding: 4px 6px;
+        border: 1px solid #000;
+        background: #f9f9f9;
+    }
 }
 
 @media (max-width: 768px) {

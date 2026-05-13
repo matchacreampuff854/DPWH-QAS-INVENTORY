@@ -719,6 +719,90 @@ function deleteFromRecords(id) {
     }
 }
 
+function printRecords() {
+    const yearSelect = document.getElementById('records-year');
+    const searchInput = document.getElementById('records-search');
+    const categoryFilter = document.getElementById('records-category-filter');
+    const statusFilter = document.getElementById('records-status-filter');
+
+    const selectedYear = yearSelect ? yearSelect.value : 'all';
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
+    const selectedStatus = statusFilter ? statusFilter.value : 'all';
+
+    let inventory = getInventory();
+
+    if (selectedYear !== 'all') {
+        const yearNum = parseInt(selectedYear);
+        inventory = inventory.filter(item => {
+            if (!item.createdAt) return false;
+            return new Date(item.createdAt).getFullYear() === yearNum;
+        });
+    }
+
+    if (selectedCategory !== 'all') {
+        inventory = inventory.filter(item => item.category === selectedCategory);
+    }
+
+    if (selectedStatus !== 'all') {
+        inventory = inventory.filter(item => item.status === selectedStatus);
+    }
+
+    if (query) {
+        inventory = inventory.filter(item =>
+            item.id.toLowerCase().includes(query) ||
+            item.name.toLowerCase().includes(query) ||
+            (item.category && item.category.toLowerCase().includes(query)) ||
+            (item.unit && item.unit.toLowerCase().includes(query))
+        );
+    }
+
+    const tbody = document.getElementById('print-body');
+    tbody.innerHTML = '';
+
+    if (!inventory.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No records to print.</td></tr>';
+        window.print();
+        return;
+    }
+
+    // Group by category
+    const grouped = {};
+    inventory.forEach(item => {
+        const cat = item.category || 'Uncategorized';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+    });
+
+    Object.keys(grouped).sort().forEach(cat => {
+        // Category header row
+        const catRow = document.createElement('tr');
+        catRow.innerHTML = `<td colspan="9" class="category-header">${cat.toUpperCase()}</td>`;
+        tbody.appendChild(catRow);
+
+        grouped[cat].forEach((item, idx) => {
+            const row = document.createElement('tr');
+            const functioning = item.status === 'functioning' ? (item.unit || '1') : '';
+            const notFunctioning = item.status === 'not-functioning' ? (item.unit || '1') : '';
+
+            row.innerHTML = `
+                <td>${idx + 1}. ${item.name}</td>
+                <td>${item.unit || ''}</td>
+                <td>${functioning}</td>
+                <td>${notFunctioning}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>${item.calibrationSchedule || ''}</td>
+                <td>${item.remarks || ''}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    });
+
+    window.print();
+}
+
 function searchInventory() {
     const query = document.getElementById('search-bar').value.toLowerCase();
     const inventory = getInventory();

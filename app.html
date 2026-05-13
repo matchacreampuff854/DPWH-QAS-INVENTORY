@@ -202,9 +202,12 @@
                             <h2>Inventory Records</h2>
                             <p id="records-count">0 items total</p>
                         </div>
-                        <button type="button" class="btn btn-primary" onclick="switchTab('materials'); setTimeout(scrollToAddMaterial, 300);">
-                            + Add Item
-                        </button>
+                        <div class="records-actions">
+                            <button type="button" class="btn btn-secondary" onclick="printRecords()">🖨️ Print</button>
+                            <button type="button" class="btn btn-primary" onclick="switchTab('materials'); setTimeout(scrollToAddMaterial, 300);">
+                                + Add Item
+                            </button>
+                        </div>
                     </div>
 
                     <div class="records-toolbar">
@@ -246,6 +249,48 @@
                                     <td colspan="8" class="no-records">No records found.</td>
                                 </tr>
                             </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Print Template (hidden on screen, shown when printing) -->
+                    <div class="print-template">
+                        <div class="form-header">
+                            <h1>CHECKLIST OF LABORATORY EQUIPMENT/ APPARATUS</h1>
+                            <div class="form-meta">
+                                <div class="form-left">
+                                    <p><strong>Office (RO/ DEO):</strong> <span class="blank-line"></span></p>
+                                    <p><strong>Head of Office (RD/ DE):</strong> <span class="blank-line"></span></p>
+                                    <p><strong>Head of Unit: (Chief, QAHD/ QAS):</strong> <span class="blank-line"></span></p>
+                                    <p><strong>Current Star Rating:</strong> <span class="blank-line"></span></p>
+                                </div>
+                                <div class="form-right">
+                                    <p class="dept-name">DEPARTMENT OF PUBLIC WORKS AND HIGHWAYS</p>
+                                    <p>BULACAN FIRST DISTRICT ENGINEERING OFFICE</p>
+                                    <p>BRICE ERICSON D. HERNANDEZ - OIC - District Engineer</p>
+                                    <p>NORBERTO L. SANTOS - Chief, Q.A.S</p>
+                                    <p>STAR II</p>
+                                </div>
+                            </div>
+                        </div>
+                        <table class="print-checklist">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">APPARATUS/ EQUIPMENT</th>
+                                    <th rowspan="2">Unit of<br>Measure</th>
+                                    <th colspan="3">Quantity per Physical Count</th>
+                                    <th colspan="3">Calibration</th>
+                                    <th rowspan="2">Remarks</th>
+                                </tr>
+                                <tr>
+                                    <th>Functioning</th>
+                                    <th>Not Functioning</th>
+                                    <th>None</th>
+                                    <th>Frequency as per<br>D.O. 184 S 2022</th>
+                                    <th>Date Last<br>Calibrated</th>
+                                    <th>Schedule Date of<br>Next Calibration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="print-body"></tbody>
                         </table>
                     </div>
                 </div>
