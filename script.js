@@ -456,7 +456,29 @@ function addNewCategory() {
 }
 
 function scrollToAddMaterial() {
-    document.getElementById('add-material').scrollIntoView({ behavior: 'smooth' });
+    const addSection = document.getElementById('add-material');
+    const listSection = document.getElementById('inventory-list');
+    const inventory = document.querySelector('.inventory-layout');
+    const metrics = document.querySelector('.metrics-grid');
+    const charts = document.querySelector('.dashboard-grid');
+    const records = document.getElementById('records-section');
+
+    if (metrics) metrics.style.display = 'none';
+    if (charts) charts.style.display = 'none';
+    if (records) {
+        records.style.display = 'none';
+        records.classList.remove('active');
+    }
+    if (inventory) inventory.style.display = 'grid';
+    if (addSection) addSection.style.display = 'block';
+    if (listSection) listSection.style.display = 'none';
+
+    // Update nav tabs
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    const matTab = document.querySelector('.nav-tab[data-tab="materials"]');
+    if (matTab) matTab.classList.add('active');
+
+    addSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 function scrollToCharts() {
@@ -501,6 +523,10 @@ function switchTab(target) {
             records.style.display = 'none';
             records.classList.remove('active');
         }
+        const addSection = document.getElementById('add-material');
+        const listSection = document.getElementById('inventory-list');
+        if (addSection) addSection.style.display = 'none';
+        if (listSection) listSection.style.display = 'block';
         document.querySelector('.inventory-layout').scrollIntoView({ behavior: 'smooth' });
     } else {
         if (metrics) metrics.style.display = 'grid';
@@ -510,6 +536,10 @@ function switchTab(target) {
             records.style.display = 'none';
             records.classList.remove('active');
         }
+        const addSection = document.getElementById('add-material');
+        const listSection = document.getElementById('inventory-list');
+        if (addSection) addSection.style.display = 'block';
+        if (listSection) listSection.style.display = 'block';
     }
 }
 
