@@ -4,6 +4,9 @@ let usageChart;
 let qualityChart;
 let categories = ['Chemicals', 'Soil Agg & Concrete & Asph Alt', 'Asphalt', 'Wood', 'Other'];
 let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
+let completedTasks = [];
+let calCurrentDate = new Date();
+let calSelectedDate = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadUnits();
@@ -16,6 +19,28 @@ document.addEventListener('DOMContentLoaded', function() {
     initTabs();
     populateYearDropdown();
     renderRecords();
+    loadCompletedTasks();
+    updateCalendarBadge();
+    renderCalendar();
+
+    document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
+    document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
+    document.getElementById('cal-next').addEventListener('click', () => changeCalendarMonth(1));
+
+    document.getElementById('notification-btn').addEventListener('click', toggleNotificationDropdown);
+
+    document.addEventListener('click', function(e) {
+        const calPopup = document.getElementById('calendar-popup');
+        const calBtn = document.getElementById('calendar-btn');
+        if (calPopup && !calPopup.contains(e.target) && !calBtn.contains(e.target)) {
+            calPopup.style.display = 'none';
+        }
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifBtn = document.getElementById('notification-btn');
+        if (notifDropdown && !notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+            notifDropdown.style.display = 'none';
+        }
+    });
 
     document.getElementById('add-form').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -31,7 +56,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('add-material-btn').addEventListener('click', scrollToAddMaterial);
-    document.getElementById('calendar-btn').addEventListener('click', toggleCalendarView);
     document.getElementById('graph-btn').addEventListener('click', scrollToCharts);
 
     document.getElementById('add-category-btn').addEventListener('click', function(e) {
@@ -176,6 +200,7 @@ function addMaterial() {
     checkNotifications();
     populateYearDropdown();
     renderRecords();
+    updateCalendarBadge();
     document.getElementById('add-form').reset();
 }
 
@@ -191,6 +216,7 @@ function deleteMaterial(id) {
         checkNotifications();
         populateYearDropdown();
         renderRecords();
+        updateCalendarBadge();
     }
 }
 
@@ -396,6 +422,8 @@ function checkNotifications() {
             ? `<strong>⚠️ ${notifications.length} Alert(s)</strong>`
             : '✓ All items up to date';
     }
+
+    renderNotificationList();
 }
 
 function getInventory() {
@@ -429,10 +457,6 @@ function addNewCategory() {
 
 function scrollToAddMaterial() {
     document.getElementById('add-material').scrollIntoView({ behavior: 'smooth' });
-}
-
-function toggleCalendarView() {
-    alert('Calendar view is coming soon!');
 }
 
 function scrollToCharts() {
@@ -710,6 +734,7 @@ function saveEdit() {
     checkNotifications();
     populateYearDropdown();
     renderRecords();
+    updateCalendarBadge();
     closeEditModal();
 }
 
@@ -801,6 +826,305 @@ function printRecords() {
     });
 
     window.print();
+}
+
+function loadCompletedTasks() {
+    const saved = localStorage.getItem('dpwh-completed-tasks');
+    if (saved) {
+        try {
+            completedTasks = JSON.parse(saved);
+            if (!Array.isArray(completedTasks)) completedTasks = [];
+        } catch (e) {
+            completedTasks = [];
+        }
+    }
+}
+
+function saveCompletedTasks() {
+    localStorage.setItem('dpwh-completed-tasks', JSON.stringify(completedTasks));
+}
+
+function isTaskCompleted(itemId, type, dateStr) {
+    return completedTasks.some(t => t.itemId === itemId && t.type === type && t.date === dateStr);
+}
+
+function toggleTaskCompletion(itemId, type, dateStr) {
+    const idx = completedTasks.findIndex(t => t.itemId === itemId && t.type === type && t.date === dateStr);
+    if (idx >= 0) {
+        completedTasks.splice(idx, 1);
+    } else {
+        completedTasks.push({ itemId, type, date: dateStr });
+    }
+    saveCompletedTasks();
+    updateCalendarBadge();
+    renderCalendar();
+    renderCalendarTasks(calSelectedDate ? calSelectedDate.getFullYear() : calCurrentDate.getFullYear(), calSelectedDate ? calSelectedDate.getMonth() : calCurrentDate.getMonth(), calSelectedDate ? calSelectedDate.getDate() : null);
+    renderNotificationList();
+}
+
+function getPendingTasks() {
+    const inventory = getInventory();
+    const tasks = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    inventory.forEach(item => {
+        if (item.maintenanceExpiry) {
+            const d = new Date(item.maintenanceExpiry);
+            d.setHours(0, 0, 0, 0);
+            const dateStr = item.maintenanceExpiry;
+            if (!isTaskCompleted(item.id, 'maintenance', dateStr)) {
+                tasks.push({ itemId: item.id, name: item.name, type: 'maintenance', date: d, dateStr, label: 'Maintenance expiry' });
+            }
+        }
+        if (item.calibrationSchedule) {
+            const d = new Date(item.calibrationSchedule);
+            d.setHours(0, 0, 0, 0);
+            const dateStr = item.calibrationSchedule;
+            if (!isTaskCompleted(item.id, 'calibration', dateStr)) {
+                tasks.push({ itemId: item.id, name: item.name, type: 'calibration', date: d, dateStr, label: 'Calibration due' });
+            }
+        }
+    });
+
+    return tasks;
+}
+
+function updateCalendarBadge() {
+    const badge = document.getElementById('calendar-badge');
+    if (!badge) return;
+    const count = getPendingTasks().length;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function toggleCalendarPopup() {
+    const popup = document.getElementById('calendar-popup');
+    if (!popup) return;
+    popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+    if (popup.style.display === 'block') {
+        renderCalendar();
+    }
+}
+
+function changeCalendarMonth(delta) {
+    calCurrentDate.setMonth(calCurrentDate.getMonth() + delta);
+    renderCalendar();
+}
+
+function renderCalendar() {
+    const grid = document.getElementById('cal-grid');
+    const label = document.getElementById('cal-month-year');
+    if (!grid || !label) return;
+
+    const year = calCurrentDate.getFullYear();
+    const month = calCurrentDate.getMonth();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    label.textContent = `${monthNames[month]} ${year}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevDaysInMonth = new Date(year, month, 0).getDate();
+
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let html = '';
+    dayLabels.forEach(d => {
+        html += `<div class="cal-day-label">${d}</div>`;
+    });
+
+    const pendingTasks = getPendingTasks();
+    const hasTaskOnDay = (y, m, day) => {
+        return pendingTasks.some(t => t.date.getFullYear() === y && t.date.getMonth() === m && t.date.getDate() === day);
+    };
+
+    // Previous month filler
+    for (let i = firstDay - 1; i >= 0; i--) {
+        html += `<div class="cal-day other-month">${prevDaysInMonth - i}</div>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const taskClass = hasTaskOnDay(year, month, day) ? 'has-tasks' : '';
+        const selectedClass = (calSelectedDate && calSelectedDate.getFullYear() === year && calSelectedDate.getMonth() === month && calSelectedDate.getDate() === day) ? 'selected' : '';
+        html += `<div class="cal-day ${taskClass} ${selectedClass}" onclick="selectCalendarDay(${year}, ${month}, ${day})">${day}</div>`;
+    }
+
+    // Next month filler
+    const totalCells = firstDay + daysInMonth;
+    const remaining = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= remaining; i++) {
+        html += `<div class="cal-day other-month">${i}</div>`;
+    }
+
+    grid.innerHTML = html;
+}
+
+function selectCalendarDay(year, month, day) {
+    calSelectedDate = new Date(year, month, day);
+    renderCalendar();
+    renderCalendarTasks(year, month, day);
+}
+
+function renderCalendarTasks(year, month, day) {
+    const container = document.getElementById('cal-tasks');
+    if (!container) return;
+
+    if (!day) {
+        container.innerHTML = '<p class="cal-no-tasks">Select a date to view tasks.</p>';
+        return;
+    }
+
+    const inventory = getInventory();
+    const tasks = [];
+
+    inventory.forEach(item => {
+        if (item.maintenanceExpiry) {
+            const d = new Date(item.maintenanceExpiry);
+            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+                const done = isTaskCompleted(item.id, 'maintenance', item.maintenanceExpiry);
+                tasks.push({ item, type: 'maintenance', dateStr: item.maintenanceExpiry, label: 'Maintenance expiry', done });
+            }
+        }
+        if (item.calibrationSchedule) {
+            const d = new Date(item.calibrationSchedule);
+            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+                const done = isTaskCompleted(item.id, 'calibration', item.calibrationSchedule);
+                tasks.push({ item, type: 'calibration', dateStr: item.calibrationSchedule, label: 'Calibration due', done });
+            }
+        }
+    });
+
+    if (!tasks.length) {
+        container.innerHTML = '<p class="cal-no-tasks">No tasks for this date.</p>';
+        return;
+    }
+
+    container.innerHTML = `<h4 style="margin:0 0 10px;font-size:0.9rem;color:var(--blue)">${month + 1}/${day}/${year}</h4>`;
+    tasks.forEach(task => {
+        const div = document.createElement('div');
+        div.className = `cal-task-item ${task.done ? 'completed' : ''}`;
+        div.innerHTML = `
+            <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTaskCompletion('${task.item.id}', '${task.type}', '${task.dateStr}')">
+            <label><strong>${task.item.name}</strong><br><small>${task.label}</small></label>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notification-dropdown');
+    if (!dropdown) return;
+    const isHidden = dropdown.style.display === 'none' || dropdown.style.display === '';
+    dropdown.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        renderNotificationList();
+    }
+}
+
+function getWeeklyTasks() {
+    const inventory = getInventory();
+    const tasks = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 7);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    inventory.forEach(item => {
+        if (item.maintenanceExpiry) {
+            const d = new Date(item.maintenanceExpiry);
+            d.setHours(0, 0, 0, 0);
+            if (d <= weekEnd) {
+                const done = isTaskCompleted(item.id, 'maintenance', item.maintenanceExpiry);
+                const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                tasks.push({ item, type: 'maintenance', dateStr: item.maintenanceExpiry, label: 'Maintenance', done, daysLeft, date: d });
+            }
+        }
+        if (item.calibrationSchedule) {
+            const d = new Date(item.calibrationSchedule);
+            d.setHours(0, 0, 0, 0);
+            if (d <= weekEnd) {
+                const done = isTaskCompleted(item.id, 'calibration', item.calibrationSchedule);
+                const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                tasks.push({ item, type: 'calibration', dateStr: item.calibrationSchedule, label: 'Calibration', done, daysLeft, date: d });
+            }
+        }
+    });
+
+    return tasks.sort((a, b) => a.date - b.date);
+}
+
+function renderNotificationList() {
+    const container = document.getElementById('notification-list');
+    const weekRange = document.getElementById('notification-week-range');
+    if (!container) return;
+
+    const tasks = getWeeklyTasks();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 6);
+
+    if (weekRange) {
+        const opts = { month: 'short', day: 'numeric' };
+        weekRange.textContent = `${today.toLocaleDateString('en-US', opts)} - ${weekEnd.toLocaleDateString('en-US', opts)}`;
+    }
+
+    if (!tasks.length) {
+        container.innerHTML = '<p class="notification-empty">No tasks for this week.</p>';
+        updateNotificationBadge(0);
+        return;
+    }
+
+    const pending = tasks.filter(t => !t.done).length;
+    updateNotificationBadge(pending);
+
+    // Group by type
+    const maintenanceTasks = tasks.filter(t => t.type === 'maintenance');
+    const calibrationTasks = tasks.filter(t => t.type === 'calibration');
+
+    container.innerHTML = '';
+
+    if (maintenanceTasks.length) {
+        const group = document.createElement('div');
+        group.className = 'notification-group';
+        group.innerHTML = `<p class="notification-group-title">Maintenance (${maintenanceTasks.filter(t => !t.done).length} pending)</p>`;
+        maintenanceTasks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = `notification-item ${task.done ? 'completed' : ''}`;
+            const daysText = task.daysLeft < 0 ? `Overdue ${Math.abs(task.daysLeft)} day(s)` : task.daysLeft === 0 ? 'Due today' : `Due in ${task.daysLeft} day(s)`;
+            div.innerHTML = `
+                <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTaskCompletion('${task.item.id}', '${task.type}', '${task.dateStr}')">
+                <label><strong>${task.item.name}</strong><span class="notif-meta">${task.item.id} &bull; ${daysText}</span></label>
+            `;
+            group.appendChild(div);
+        });
+        container.appendChild(group);
+    }
+
+    if (calibrationTasks.length) {
+        const group = document.createElement('div');
+        group.className = 'notification-group';
+        group.innerHTML = `<p class="notification-group-title">Calibration (${calibrationTasks.filter(t => !t.done).length} pending)</p>`;
+        calibrationTasks.forEach(task => {
+            const div = document.createElement('div');
+            div.className = `notification-item ${task.done ? 'completed' : ''}`;
+            const daysText = task.daysLeft < 0 ? `Overdue ${Math.abs(task.daysLeft)} day(s)` : task.daysLeft === 0 ? 'Due today' : `Due in ${task.daysLeft} day(s)`;
+            div.innerHTML = `
+                <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTaskCompletion('${task.item.id}', '${task.type}', '${task.dateStr}')">
+                <label><strong>${task.item.name}</strong><span class="notif-meta">${task.item.id} &bull; ${daysText}</span></label>
+            `;
+            group.appendChild(div);
+        });
+        container.appendChild(group);
+    }
+}
+
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notification-badge');
+    if (!badge) return;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
 }
 
 function searchInventory() {
