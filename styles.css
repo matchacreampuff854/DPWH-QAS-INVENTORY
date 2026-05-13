@@ -364,6 +364,10 @@ a.brand-mark.logo-mark {
     padding: 0;
 }
 
+#calendar-btn {
+    position: relative;
+}
+
 .icon-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 25px rgba(15, 79, 168, 0.08);
