@@ -347,6 +347,7 @@ function scrollToCharts() {
     }
 }
 
+function searchInventory() {
     const query = document.getElementById('search-bar').value.toLowerCase();
     const inventory = getInventory();
     const filteredInventory = inventory.filter(item =>
@@ -357,6 +358,11 @@ function scrollToCharts() {
 
     const tbody = document.getElementById('inventory-body');
     tbody.innerHTML = '';
+
+    if (!filteredInventory.length) {
+        tbody.innerHTML = '<tr><td colspan="9">No matching materials found.</td></tr>';
+        return;
+    }
 
     filteredInventory.forEach(item => {
         const row = document.createElement('tr');
@@ -375,59 +381,33 @@ function scrollToCharts() {
     });
 }
 
-function updateChart() {
-    if (chart) {
-        chart.destroy();
+function showHistory() {
+    const historySection = document.getElementById('history-section');
+    if (!historySection) {
+        return;
     }
 
-    const inventory = getInventory();
-    const categories = {};
+    const shouldShow = historySection.style.display === 'none';
+    historySection.style.display = shouldShow ? 'block' : 'none';
 
-    inventory.forEach(item => {
-        if (!categories[item.category]) {
-            categories[item.category] = { total: 0, functioning: 0 };
-        }
-        categories[item.category].total++;
-        if (item.status === 'functioning') {
-            categories[item.category].functioning++;
-        }
+    if (shouldShow) {
+        historySection.scrollIntoView({ behavior: 'smooth' });
+        setActiveTab('history-btn');
+    } else {
+        setActiveTab('dashboard-tab');
+    }
+}
+
+function setActiveTab(tabId) {
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(tab => {
+        tab.classList.toggle('active', tab.id === tabId);
     });
 
-    const labels = Object.keys(categories);
-    const data = labels.map(cat => {
-        const total = categories[cat].total;
-        const functioning = categories[cat].functioning;
-        return total > 0 ? (functioning / total) * 100 : 0;
-    });
-
-    const ctx = document.getElementById('category-chart').getContext('2d');
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Functioning Percentage (%)',
-                data: data,
-                backgroundColor: '#ff6600', // Orange
-                borderColor: '#007bff', // Blue
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                }
-            }
-        }
-    });
+    const historySection = document.getElementById('history-section');
+    if (historySection) {
+        historySection.style.display = tabId === 'history-btn' ? 'block' : 'none';
+    }
 }
 
 function checkNotifications() {
