@@ -270,7 +270,8 @@ a.brand-mark.logo-mark {
     gap: 12px;
 }
 
-.nav-tab {
+.nav-tab {  
+    font-family: 'Georgia', serif;
     border: none;
     background: #f3f7fd;
     color: var(--text);
