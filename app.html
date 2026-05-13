@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DPWH Quality Assurance Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Georgia:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark logo-mark">
+                    <img src="DPWH logo.jpg" alt="DPWH Logo">
+                </div>
+                <div class="brand-copy">
+                    <h1>DPWH Quality Assurance Section</h1>
+                    <p>Material Management System</p>
+                </div>
+            </div>
+
+            <div class="nav-links">
+                <button class="nav-tab active">Dashboard</button>
+                <button class="nav-tab">Materials</button>
+                <button class="nav-tab">History</button>
+            </div>
+
+            <div class="top-actions">
+                <button id="calendar-btn" class="icon-btn" aria-label="Calendar">📅</button>
+                <button id="graph-btn" class="icon-btn" aria-label="Analytics">📊</button>
+                <button id="add-material-btn" class="btn btn-primary">+ Add Material</button>
+                <button class="btn btn-tertiary notification-btn" aria-label="Notifications">
+                    🔔
+                    <span class="notification-dot"></span>
+                </button>
+            </div>
+        </header>
+
+        <main class="dashboard">
+            <section class="metrics-grid">
+                <article class="metric-card">
+                    <div>
+                        <span class="metric-title">Total Materials</span>
+                        <strong id="total-materials">0</strong>
+                    </div>
+                    <p>Active inventory items</p>
+                </article>
+                <article class="metric-card">
+                    <div>
+                        <span class="metric-title">Tests Passed</span>
+                        <strong id="tests-passed">0%</strong>
+                    </div>
+                    <p>Quality assurance rate</p>
+                </article>
+                <article class="metric-card">
+                    <div>
+                        <span class="metric-title">Inspections</span>
+                        <strong id="inspections-count">0</strong>
+                    </div>
+                    <p>Completed this month</p>
+                </article>
+            </section>
+
+            <section class="dashboard-grid">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>Material Usage Trend</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="usage-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>Quality Test Results</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="quality-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="inventory-layout">
+                <div class="card inventory-panel">
+                    <div class="card-header">
+                        <div>
+                            <h2>Inventory Management</h2>
+                            <p>Search, add, and review material inventory details.</p>
+                        </div>
+                        <div class="small-status">Live dashboard</div>
+                    </div>
+
+                    <div id="search-container" class="search-container">
+                        <input type="text" id="search-bar" placeholder="Search by item, category, or ID">
+                        <button id="search-btn" class="btn btn-secondary">Search</button>
+                    </div>
+
+                    <div id="add-material" class="card surface-card">
+                        <h3>Add New Material</h3>
+                        <form id="add-form" class="form-grid">
+                            <div class="form-group">
+                                <label for="item-id">Item ID</label>
+                                <input type="text" id="item-id" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-name">Item Name</label>
+                                <input type="text" id="item-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-category">Category</label>
+                                <div class="category-input-group">
+                                    <select id="item-category" required>
+                                        <option value="">Select Category</option>
+                                        <option value="Chemicals">Chemicals</option>
+                                        <option value="Soil Agg & Concrete & Asph Alt">Soil Agg & Concrete & Asph Alt</option>
+                                        <option value="Asphalt">Asphalt</option>
+                                        <option value="Wood">Wood</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <button type="button" id="add-category-btn" class="btn btn-secondary btn-add-category" title="Add new category">+</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-quantity">Quantity</label>
+                                <input type="number" id="item-quantity" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-status">Status</label>
+                                <select id="item-status" required>
+                                    <option value="functioning">Functioning</option>
+                                    <option value="not-functioning">Not Functioning</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenance-expiry">Maintenance Expiry Date</label>
+                                <input type="date" id="maintenance-expiry">
+                            </div>
+                            <div class="form-group">
+                                <label for="calibration-schedule">Next Calibration Date</label>
+                                <input type="date" id="calibration-schedule">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="remarks">Remarks/Comments</label>
+                                <textarea id="remarks" placeholder="Add any remarks or comments about this material..." rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">Add Material</button>
+                        </form>
+                    </div>
+
+                    <div id="inventory-list" class="card surface-card">
+                        <h3>Current Inventory</h3>
+                        <div class="table-container">
+                            <table id="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>Quantity</th>
+                                        <th>Status</th>
+                                        <th>Maintenance Expiry</th>
+                                        <th>Calibration Schedule</th>
+                                        <th>Remarks</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="card activity-panel">
+                    <div class="card-header">
+                        <h2>Recent Activity</h2>
+                    </div>
+                    <ul id="recent-activity" class="activity-list">
+                        <li class="activity-item">No activity yet. Add a material to populate activity history.</li>
+                    </ul>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

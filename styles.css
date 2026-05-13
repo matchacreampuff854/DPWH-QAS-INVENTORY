@@ -220,16 +220,12 @@ body {
     gap: 18px;
 }
 
-.brand-mark {
-    width: 64px;
-    height: 64px;
+.brand-logo {
+    width: 80px;
+    height: 80px;
     border-radius: 18px;
-    display: grid;
-    place-items: center;
-    background: linear-gradient(135deg, var(--blue), var(--orange));
-    color: #ffffff;
-    font-size: 1.25rem;
-    font-weight: 700;
+    display: block;
+    object-fit: contain;
     box-shadow: 0 16px 40px rgba(15, 79, 168, 0.18);
 }
 
@@ -327,17 +323,37 @@ body {
 }
 
 .icon-btn {
-    width: 48px;
-    height: 48px;
     border-radius: 16px;
     border: 1px solid rgba(99, 102, 241, 0.1);
     background: #f8fbff;
     color: var(--blue);
-    font-size: 1.1rem;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-family: 'Georgia', serif;
+    font-weight: 500;
+    padding: 10px 16px;
+    min-height: 48px;
+    min-width: 48px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#add-material-btn,
+#history-btn {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+}
+
+#calendar-btn,
+#graph-btn {
+    width: 48px;
+    height: 48px;
     display: grid;
     place-items: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding: 0;
 }
 
 .icon-btn:hover {
