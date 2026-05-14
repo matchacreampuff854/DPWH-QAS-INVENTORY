@@ -4,6 +4,10 @@ let usageChart;
 let qualityChart;
 let categories = ['Soil Aggregates & Asphalt Aggregates', 'Asphaltic Materials & Asphalt Mixes', 'Test on Concrete'];
 let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
+const API_BASE = (window.location.port === '5500' || window.location.protocol === 'file:') 
+    ? 'http://localhost:3000/api' 
+    : '/api';
+
 let completedTasks = [];
 let calCurrentDate = new Date();
 let calSelectedDate = null;
@@ -14,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     populateUnitSelect();
     initTabs();
     loadCompletedTasks();
+    await checkBackendHealth();
     await syncInventory();
 
     document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
@@ -261,35 +266,37 @@ async function addMaterial() {
     const id = 'EQ-' + Date.now();
 
     try {
-        const res = await fetch('/api/inventory', {
+        const res = await fetch(`${API_BASE}/inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
-            alert(err.error || 'Failed to add material');
+            alert(err.error || 'Failed to add material. Check that the backend is running (cd Backend && npm start).');
             return;
         }
         document.getElementById('add-form').reset();
         await syncInventory();
     } catch (error) {
-        alert('Failed to add material. Make sure the backend is running.');
+        alert('Failed to add material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
+        showBackendWarning();
     }
 }
 
 async function deleteMaterial(id) {
     if (confirm('Are you sure you want to delete this material?')) {
         try {
-            const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE}/inventory/${id}`, { method: 'DELETE' });
             if (!res.ok) {
                 const err = await res.json();
-                alert(err.error || 'Failed to delete material');
+                alert(err.error || 'Failed to delete material. Check that the backend is running.');
                 return;
             }
             await syncInventory();
         } catch (error) {
-            alert('Failed to delete material. Make sure the backend is running.');
+            alert('Failed to delete material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
+            showBackendWarning();
         }
     }
 }
@@ -504,9 +511,51 @@ function getInventory() {
     return inventoryCache;
 }
 
+async function checkBackendHealth() {
+    try {
+        const res = await fetch(`${API_BASE}/health`, { method: 'GET', signal: AbortSignal.timeout(3000) });
+        if (!res.ok) throw new Error('Backend unhealthy');
+        removeBackendWarning();
+    } catch (error) {
+        showBackendWarning();
+    }
+}
+
+function showBackendWarning() {
+    let banner = document.getElementById('backend-warning');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'backend-warning';
+        banner.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #dc3545;
+            color: #fff;
+            padding: 14px 24px;
+            font-weight: 700;
+            z-index: 9999;
+            text-align: center;
+            font-size: 0.95rem;
+        `;
+        document.body.appendChild(banner);
+    }
+    banner.innerHTML = `
+        ⚠️ Backend is not running. 
+        Open Command Prompt, type: <code style="background:rgba(255,255,255,0.2);padding:2px 6px;border-radius:4px;">cd Backend && npm start</code>
+        <button onclick="this.parentElement.remove()" style="margin-left:12px;padding:4px 12px;border:none;border-radius:6px;background:#fff;color:#dc3545;font-weight:700;cursor:pointer;">Dismiss</button>
+    `;
+}
+
+function removeBackendWarning() {
+    const banner = document.getElementById('backend-warning');
+    if (banner) banner.remove();
+}
+
 async function syncInventory() {
     try {
-        const res = await fetch('/api/inventory');
+        const res = await fetch(`${API_BASE}/inventory`);
         if (!res.ok) throw new Error('Failed to fetch inventory');
         inventoryCache = await res.json();
     } catch (error) {
@@ -856,20 +905,21 @@ async function saveEdit() {
     }
 
     try {
-        const res = await fetch(`/api/inventory/${originalId}`, {
+        const res = await fetch(`${API_BASE}/inventory/${originalId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: originalId, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
-            alert(err.error || 'Failed to update material');
+            alert(err.error || 'Failed to update material. Check that the backend is running.');
             return;
         }
         closeEditModal();
         await syncInventory();
     } catch (error) {
-        alert('Failed to update material. Make sure the backend is running.');
+        alert('Failed to update material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
+        showBackendWarning();
     }
 }
 

@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "EQ-1778740592499",
+    "name": "RGR",
+    "category": "Soil Aggregates & Asphalt Aggregates",
+    "unit": "set",
+    "status": "not-functioning",
+    "maintenanceExpiry": "2026-05-28",
+    "calibrationSchedule": "2026-05-16",
+    "remarks": "VFDH",
+    "createdAt": "2026-05-14T06:36:32.520Z"
+  }
+]

@@ -153,6 +153,22 @@ app.get('/api/health', (req, res) => {
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '..')));
 
-app.listen(PORT, () => {
-    console.log(`DPWH QAS Inventory backend running on http://localhost:${PORT}`);
+const os = require('os');
+function getLocalIP() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'YOUR-IP';
+}
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`DPWH QAS Inventory running on:`);
+    console.log(`  - Local:   http://localhost:${PORT}`);
+    console.log(`  - Network: http://${getLocalIP()}:${PORT}`);
+    console.log(`Share the Network link with others on the same WiFi/LAN.`);
 });
