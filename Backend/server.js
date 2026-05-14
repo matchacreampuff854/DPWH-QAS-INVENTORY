@@ -64,9 +64,9 @@ app.get('/api/inventory/search', (req, res) => {
 // POST add new inventory item
 app.post('/api/inventory', (req, res) => {
     try {
-        const { id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks } = req.body;
+        const { id, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
-        if (!id || !name || !category || !unit || !status) {
+        if (!id || !name || !category || !unit || !quantityPerPhysicalCount) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -81,9 +81,10 @@ app.post('/api/inventory', (req, res) => {
             name,
             category,
             unit,
-            status,
-            maintenanceExpiry: maintenanceExpiry || null,
-            calibrationSchedule: calibrationSchedule || null,
+            quantityPerPhysicalCount,
+            frequencyAsPerDO: frequencyAsPerDO || null,
+            dateLastCalibrated: dateLastCalibrated || null,
+            scheduleDateOfNextCalibration: scheduleDateOfNextCalibration || null,
             remarks: remarks || null,
             createdAt: new Date().toISOString()
         };
@@ -100,9 +101,9 @@ app.post('/api/inventory', (req, res) => {
 app.put('/api/inventory/:id', (req, res) => {
     try {
         const { id } = req.params;
-        const { name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks } = req.body;
+        const { name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
-        if (!name || !category || !unit || !status) {
+        if (!name || !category || !unit || !quantityPerPhysicalCount) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -117,9 +118,10 @@ app.put('/api/inventory/:id', (req, res) => {
             name,
             category,
             unit,
-            status,
-            maintenanceExpiry: maintenanceExpiry || null,
-            calibrationSchedule: calibrationSchedule || null,
+            quantityPerPhysicalCount,
+            frequencyAsPerDO: frequencyAsPerDO || null,
+            dateLastCalibrated: dateLastCalibrated || null,
+            scheduleDateOfNextCalibration: scheduleDateOfNextCalibration || null,
             remarks: remarks || null
         };
 

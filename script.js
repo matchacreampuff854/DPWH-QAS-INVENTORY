@@ -368,6 +368,22 @@ function removeSelectedUnit() {
     );
 }
 
+function getQuantity(item) {
+    return item.quantityPerPhysicalCount || item.status || 'none';
+}
+
+function getNextCalibration(item) {
+    return item.scheduleDateOfNextCalibration || item.calibrationSchedule || null;
+}
+
+function getFrequency(item) {
+    return item.frequencyAsPerDO || 'N/A';
+}
+
+function getDateLastCalibrated(item) {
+    return item.dateLastCalibrated || 'N/A';
+}
+
 function loadInventory() {
     const inventory = getInventory();
     const tbody = document.getElementById('inventory-body');
@@ -375,13 +391,18 @@ function loadInventory() {
 
     inventory.forEach(item => {
         const row = document.createElement('tr');
+        const qty = getQuantity(item);
+        const freq = getFrequency(item);
+        const lastCal = getDateLastCalibrated(item);
+        const nextCal = getNextCalibration(item) || 'N/A';
         row.innerHTML = `
             <td>${item.name}</td>
             <td>${item.category}</td>
-            <td>${item.unit || item.quantity || 'N/A'}</td>
-            <td>${item.status}</td>
-            <td>${item.maintenanceExpiry || 'N/A'}</td>
-            <td>${item.calibrationSchedule || 'N/A'}</td>
+            <td>${item.unit || 'N/A'}</td>
+            <td>${qty}</td>
+            <td>${freq}</td>
+            <td>${lastCal}</td>
+            <td>${nextCal}</td>
             <td>${item.remarks ? '<strong>' + item.remarks.substring(0, 20) + '...</strong>' : 'N/A'}</td>
             <td><button class="delete-btn" onclick="deleteMaterial('${item.id}')">Delete</button></td>
         `;
@@ -393,12 +414,13 @@ async function addMaterial() {
     const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
     const unit = document.getElementById('item-unit').value;
-    const status = document.getElementById('item-status').value;
-    const maintenanceExpiry = document.getElementById('maintenance-expiry').value;
-    const calibrationSchedule = document.getElementById('calibration-schedule').value;
+    const quantityPerPhysicalCount = document.getElementById('item-quantity').value;
+    const frequencyAsPerDO = document.getElementById('frequency-do').value.trim();
+    const dateLastCalibrated = document.getElementById('date-last-calibrated').value;
+    const scheduleDateOfNextCalibration = document.getElementById('schedule-next-calibration').value;
     const remarks = document.getElementById('remarks').value.trim();
 
-    if (!name || !category || !unit || !status) {
+    if (!name || !category || !unit || !quantityPerPhysicalCount) {
         alert('Please fill in all required fields');
         return;
     }
@@ -409,7 +431,7 @@ async function addMaterial() {
         const res = await fetch(`${API_BASE}/inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
+            body: JSON.stringify({ id, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -444,7 +466,7 @@ async function deleteMaterial(id) {
 function updateDashboard() {
     const inventory = getInventory();
     const total = inventory.length;
-    const functioningCount = inventory.filter(item => item.status === 'functioning').length;
+    const functioningCount = inventory.filter(item => getQuantity(item) === 'functioning').length;
     const testsPassed = total ? Math.round((functioningCount / total) * 100) : 0;
     const inspections = total ? Math.max(16, Math.round(total * 1.5) + 12) : 0;
 
@@ -539,7 +561,7 @@ function updateCharts() {
             categoriesData[item.category] = { total: 0, functioning: 0 };
         }
         categoriesData[item.category].total += 1;
-        if (item.status === 'functioning') {
+        if (getQuantity(item) === 'functioning') {
             categoriesData[item.category].functioning += 1;
         }
     });
@@ -605,18 +627,9 @@ function checkNotifications() {
     const warningDays = 30;
 
     inventory.forEach(item => {
-        if (item.maintenanceExpiry) {
-            const expiryDate = new Date(item.maintenanceExpiry);
-            const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-            if (daysUntilExpiry <= warningDays && daysUntilExpiry >= 0) {
-                notifications.push(`Maintenance for ${item.name} expires in ${daysUntilExpiry} days`);
-            } else if (daysUntilExpiry < 0) {
-                notifications.push(`Maintenance for ${item.name} has expired`);
-            }
-        }
-
-        if (item.calibrationSchedule) {
-            const calibrationDate = new Date(item.calibrationSchedule);
+        const nextCal = getNextCalibration(item);
+        if (nextCal) {
+            const calibrationDate = new Date(nextCal);
             const daysUntilCalibration = Math.ceil((calibrationDate - today) / (1000 * 60 * 60 * 24));
             if (daysUntilCalibration <= warningDays && daysUntilCalibration >= 0) {
                 notifications.push(`Calibration for ${item.name} scheduled in ${daysUntilCalibration} days`);
@@ -933,9 +946,9 @@ function renderRecords() {
         inventory = inventory.filter(item => item.category === selectedCategory);
     }
 
-    // Status filter
+    // Status filter (Quantity per Physical Count)
     if (selectedStatus !== 'all') {
-        inventory = inventory.filter(item => item.status === selectedStatus);
+        inventory = inventory.filter(item => getQuantity(item) === selectedStatus);
     }
 
     // Search filter
@@ -954,31 +967,28 @@ function renderRecords() {
     tbody.innerHTML = '';
 
     if (!inventory.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="no-records">No records found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="no-records">No records found.</td></tr>';
         return;
     }
 
     inventory.forEach(item => {
         const row = document.createElement('tr');
-        const badgeClass = item.status === 'functioning' ? 'functioning' : 'not-functioning';
-        const statusText = item.status === 'functioning' ? 'Functioning' : 'Not Functioning';
-        const today = new Date();
-        let calStatus = item.calibrationSchedule || 'N/A';
-        if (item.calibrationSchedule) {
-            const calDate = new Date(item.calibrationSchedule);
-            const days = Math.ceil((calDate - today) / (1000 * 60 * 60 * 24));
-            if (days < 0) {
-                calStatus = `<span style="color:#dc3545;font-weight:700">Overdue ${Math.abs(days)}d</span>`;
-            }
-        }
+        const qty = getQuantity(item);
+        const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
+        const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+        const freq = getFrequency(item);
+        const lastCal = getDateLastCalibrated(item);
+        const nextCal = getNextCalibration(item) || 'N/A';
 
         row.innerHTML = `
             <td><strong>${item.name}</strong></td>
             <td>${item.category}</td>
-            <td>${item.unit || item.quantity || 'N/A'}</td>
-            <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
-            <td>${item.maintenanceExpiry || 'N/A'}</td>
-            <td>${calStatus}</td>
+            <td>${item.unit || 'N/A'}</td>
+            <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+            <td>${freq}</td>
+            <td>${lastCal}</td>
+            <td>${nextCal}</td>
+            <td>${item.remarks || ''}</td>
             <td>
                 <div class="action-btns">
                     <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
@@ -997,9 +1007,10 @@ function openEditModal(id) {
 
     document.getElementById('edit-original-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
-    document.getElementById('edit-item-status').value = item.status;
-    document.getElementById('edit-maintenance-expiry').value = item.maintenanceExpiry || '';
-    document.getElementById('edit-calibration-schedule').value = item.calibrationSchedule || '';
+    document.getElementById('edit-item-quantity').value = getQuantity(item);
+    document.getElementById('edit-frequency-do').value = item.frequencyAsPerDO || '';
+    document.getElementById('edit-date-last-calibrated').value = item.dateLastCalibrated || '';
+    document.getElementById('edit-schedule-next-calibration').value = getNextCalibration(item) || '';
     document.getElementById('edit-remarks').value = item.remarks || '';
 
     const catSelect = document.getElementById('edit-item-category');
@@ -1034,12 +1045,13 @@ async function saveEdit() {
     const name = document.getElementById('edit-item-name').value.trim();
     const category = document.getElementById('edit-item-category').value;
     const unit = document.getElementById('edit-item-unit').value;
-    const status = document.getElementById('edit-item-status').value;
-    const maintenanceExpiry = document.getElementById('edit-maintenance-expiry').value;
-    const calibrationSchedule = document.getElementById('edit-calibration-schedule').value;
+    const quantityPerPhysicalCount = document.getElementById('edit-item-quantity').value;
+    const frequencyAsPerDO = document.getElementById('edit-frequency-do').value.trim();
+    const dateLastCalibrated = document.getElementById('edit-date-last-calibrated').value;
+    const scheduleDateOfNextCalibration = document.getElementById('edit-schedule-next-calibration').value;
     const remarks = document.getElementById('edit-remarks').value.trim();
 
-    if (!name || !category || !unit || !status) {
+    if (!name || !category || !unit || !quantityPerPhysicalCount) {
         alert('Please fill in all required fields');
         return;
     }
@@ -1048,7 +1060,7 @@ async function saveEdit() {
         const res = await fetch(`${API_BASE}/inventory/${originalId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: originalId, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
+            body: JSON.stringify({ id: originalId, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -1095,7 +1107,7 @@ function printRecords() {
     }
 
     if (selectedStatus !== 'all') {
-        inventory = inventory.filter(item => item.status === selectedStatus);
+        inventory = inventory.filter(item => getQuantity(item) === selectedStatus);
     }
 
     if (query) {
@@ -1132,18 +1144,23 @@ function printRecords() {
 
         grouped[cat].forEach((item, idx) => {
             const row = document.createElement('tr');
-            const functioning = item.status === 'functioning' ? (item.unit || '1') : '';
-            const notFunctioning = item.status === 'not-functioning' ? (item.unit || '1') : '';
+            const qty = getQuantity(item);
+            const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+            const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+            const noneVal = qty === 'none' ? (item.unit || '1') : '';
+            const freq = item.frequencyAsPerDO || '';
+            const lastCal = item.dateLastCalibrated || '';
+            const nextCal = getNextCalibration(item) || '';
 
             row.innerHTML = `
                 <td>${idx + 1}. ${item.name}</td>
                 <td>${item.unit || ''}</td>
                 <td>${functioning}</td>
                 <td>${notFunctioning}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td>${item.calibrationSchedule || ''}</td>
+                <td>${noneVal}</td>
+                <td>${freq}</td>
+                <td>${lastCal}</td>
+                <td>${nextCal}</td>
                 <td>${item.remarks || ''}</td>
             `;
             tbody.appendChild(row);
@@ -1194,18 +1211,11 @@ function getPendingTasks() {
     today.setHours(0, 0, 0, 0);
 
     inventory.forEach(item => {
-        if (item.maintenanceExpiry) {
-            const d = new Date(item.maintenanceExpiry);
+        const nextCal = getNextCalibration(item);
+        if (nextCal) {
+            const d = new Date(nextCal);
             d.setHours(0, 0, 0, 0);
-            const dateStr = item.maintenanceExpiry;
-            if (!isTaskCompleted(item.id, 'maintenance', dateStr)) {
-                tasks.push({ itemId: item.id, name: item.name, type: 'maintenance', date: d, dateStr, label: 'Maintenance expiry' });
-            }
-        }
-        if (item.calibrationSchedule) {
-            const d = new Date(item.calibrationSchedule);
-            d.setHours(0, 0, 0, 0);
-            const dateStr = item.calibrationSchedule;
+            const dateStr = nextCal;
             if (!isTaskCompleted(item.id, 'calibration', dateStr)) {
                 tasks.push({ itemId: item.id, name: item.name, type: 'calibration', date: d, dateStr, label: 'Calibration due' });
             }
@@ -1307,18 +1317,12 @@ function renderCalendarTasks(year, month, day) {
     const tasks = [];
 
     inventory.forEach(item => {
-        if (item.maintenanceExpiry) {
-            const d = new Date(item.maintenanceExpiry);
+        const nextCal = getNextCalibration(item);
+        if (nextCal) {
+            const d = new Date(nextCal);
             if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-                const done = isTaskCompleted(item.id, 'maintenance', item.maintenanceExpiry);
-                tasks.push({ item, type: 'maintenance', dateStr: item.maintenanceExpiry, label: 'Maintenance expiry', done });
-            }
-        }
-        if (item.calibrationSchedule) {
-            const d = new Date(item.calibrationSchedule);
-            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-                const done = isTaskCompleted(item.id, 'calibration', item.calibrationSchedule);
-                tasks.push({ item, type: 'calibration', dateStr: item.calibrationSchedule, label: 'Calibration due', done });
+                const done = isTaskCompleted(item.id, 'calibration', nextCal);
+                tasks.push({ item, type: 'calibration', dateStr: nextCal, label: 'Calibration due', done });
             }
         }
     });
@@ -1360,22 +1364,14 @@ function getWeeklyTasks() {
     weekEnd.setHours(23, 59, 59, 999);
 
     inventory.forEach(item => {
-        if (item.maintenanceExpiry) {
-            const d = new Date(item.maintenanceExpiry);
+        const nextCal = getNextCalibration(item);
+        if (nextCal) {
+            const d = new Date(nextCal);
             d.setHours(0, 0, 0, 0);
             if (d <= weekEnd) {
-                const done = isTaskCompleted(item.id, 'maintenance', item.maintenanceExpiry);
+                const done = isTaskCompleted(item.id, 'calibration', nextCal);
                 const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-                tasks.push({ item, type: 'maintenance', dateStr: item.maintenanceExpiry, label: 'Maintenance', done, daysLeft, date: d });
-            }
-        }
-        if (item.calibrationSchedule) {
-            const d = new Date(item.calibrationSchedule);
-            d.setHours(0, 0, 0, 0);
-            if (d <= weekEnd) {
-                const done = isTaskCompleted(item.id, 'calibration', item.calibrationSchedule);
-                const daysLeft = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-                tasks.push({ item, type: 'calibration', dateStr: item.calibrationSchedule, label: 'Calibration', done, daysLeft, date: d });
+                tasks.push({ item, type: 'calibration', dateStr: nextCal, label: 'Calibration', done, daysLeft, date: d });
             }
         }
     });
@@ -1468,19 +1464,24 @@ function searchInventory() {
     tbody.innerHTML = '';
 
     if (!filteredInventory.length) {
-        tbody.innerHTML = '<tr><td colspan="8">No matching materials found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">No matching materials found.</td></tr>';
         return;
     }
 
     filteredInventory.forEach(item => {
         const row = document.createElement('tr');
+        const qty = getQuantity(item);
+        const freq = getFrequency(item);
+        const lastCal = getDateLastCalibrated(item);
+        const nextCal = getNextCalibration(item) || 'N/A';
         row.innerHTML = `
             <td>${item.name}</td>
             <td>${item.category}</td>
-            <td>${item.unit || item.quantity || 'N/A'}</td>
-            <td>${item.status}</td>
-            <td>${item.maintenanceExpiry || 'N/A'}</td>
-            <td>${item.calibrationSchedule || 'N/A'}</td>
+            <td>${item.unit || 'N/A'}</td>
+            <td>${qty}</td>
+            <td>${freq}</td>
+            <td>${lastCal}</td>
+            <td>${nextCal}</td>
             <td>${item.remarks ? '<strong>' + item.remarks.substring(0, 20) + '...</strong>' : 'N/A'}</td>
             <td><button class="delete-btn" onclick="deleteMaterial('${item.id}')">Delete</button></td>
         `;
