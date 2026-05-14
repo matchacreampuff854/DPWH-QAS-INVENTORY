@@ -38,6 +38,7 @@ app.get('/api/inventory', (req, res) => {
         const inventory = readInventory();
         res.json(inventory);
     } catch (error) {
+        console.error('GET /api/inventory error:', error);
         res.status(500).json({ error: 'Failed to read inventory' });
     }
 });
@@ -47,13 +48,16 @@ app.get('/api/inventory/search', (req, res) => {
     try {
         const query = (req.query.q || '').toLowerCase();
         const inventory = readInventory();
-        const filtered = inventory.filter(item =>
-            item.id.toLowerCase().includes(query) ||
-            item.name.toLowerCase().includes(query) ||
-            item.category.toLowerCase().includes(query)
-        );
+        const filtered = inventory.filter(item => {
+            const id = (item.id || '').toLowerCase();
+            const name = (item.name || '').toLowerCase();
+            const category = (item.category || '').toLowerCase();
+            const unit = (item.unit || '').toLowerCase();
+            return id.includes(query) || name.includes(query) || category.includes(query) || unit.includes(query);
+        });
         res.json(filtered);
     } catch (error) {
+        console.error('GET /api/inventory/search error:', error);
         res.status(500).json({ error: 'Failed to search inventory' });
     }
 });
@@ -61,9 +65,9 @@ app.get('/api/inventory/search', (req, res) => {
 // POST add new inventory item
 app.post('/api/inventory', (req, res) => {
     try {
-        const { id, name, category, quantity, status, maintenanceExpiry, calibrationSchedule, remarks } = req.body;
+        const { id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks } = req.body;
 
-        if (!id || !name || !category || quantity === undefined || !status) {
+        if (!id || !name || !category || !unit || !status) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -77,7 +81,7 @@ app.post('/api/inventory', (req, res) => {
             id,
             name,
             category,
-            quantity: parseInt(quantity),
+            unit,
             status,
             maintenanceExpiry: maintenanceExpiry || null,
             calibrationSchedule: calibrationSchedule || null,
@@ -89,7 +93,49 @@ app.post('/api/inventory', (req, res) => {
         writeInventory(inventory);
         res.status(201).json(newItem);
     } catch (error) {
+        console.error('POST /api/inventory error:', error);
         res.status(500).json({ error: 'Failed to add inventory item' });
+    }
+});
+
+// PUT update inventory item by original ID
+app.put('/api/inventory/:originalId', (req, res) => {
+    try {
+        const { originalId } = req.params;
+        const { id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks } = req.body;
+
+        if (!id || !name || !category || !unit || !status) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const inventory = readInventory();
+        const index = inventory.findIndex(item => item.id === originalId);
+        if (index === -1) {
+            return res.status(404).json({ error: 'Item not found' });
+        }
+
+        if (id !== originalId && inventory.some(item => item.id === id)) {
+            return res.status(409).json({ error: 'Item ID already exists' });
+        }
+
+        inventory[index] = {
+            ...inventory[index],
+            id,
+            name,
+            category,
+            unit,
+            status,
+            maintenanceExpiry: maintenanceExpiry || null,
+            calibrationSchedule: calibrationSchedule || null,
+            remarks: remarks || null,
+            updatedAt: new Date().toISOString()
+        };
+
+        writeInventory(inventory);
+        res.json(inventory[index]);
+    } catch (error) {
+        console.error('PUT /api/inventory/:originalId error:', error);
+        res.status(500).json({ error: 'Failed to update inventory item' });
     }
 });
 
@@ -107,6 +153,7 @@ app.delete('/api/inventory/:id', (req, res) => {
         writeInventory(updatedInventory);
         res.json({ message: 'Item deleted successfully' });
     } catch (error) {
+        console.error('DELETE /api/inventory/:id error:', error);
         res.status(500).json({ error: 'Failed to delete inventory item' });
     }
 });
@@ -119,6 +166,15 @@ app.get('/api/health', (req, res) => {
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '..')));
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`DPWH QAS Inventory backend running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use. Please stop the other process or set a different PORT.`);
+    } else {
+        console.error('Server error:', err);
+    }
+    process.exit(1);
 });

@@ -7,21 +7,14 @@ let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
 let completedTasks = [];
 let calCurrentDate = new Date();
 let calSelectedDate = null;
+let inventoryCache = [];
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     loadUnits();
     populateUnitSelect();
-    loadInventory();
-    updateDashboard();
-    updateCharts();
-    updateRecentActivity();
-    checkNotifications();
     initTabs();
-    populateYearDropdown();
-    renderRecords();
     loadCompletedTasks();
-    updateCalendarBadge();
-    renderCalendar();
+    await syncInventory();
 
     document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
     document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
@@ -169,7 +162,7 @@ function loadInventory() {
     });
 }
 
-function addMaterial() {
+async function addMaterial() {
     const id = document.getElementById('item-id').value.trim();
     const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
@@ -184,39 +177,37 @@ function addMaterial() {
         return;
     }
 
-    const inventory = getInventory();
-    const existingItem = inventory.find(item => item.id === id);
-    if (existingItem) {
-        alert('Item ID already exists');
-        return;
+    try {
+        const res = await fetch('/api/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to add material');
+            return;
+        }
+        document.getElementById('add-form').reset();
+        await syncInventory();
+    } catch (error) {
+        alert('Failed to add material. Make sure the backend is running.');
     }
-
-    inventory.push({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks, createdAt: new Date().toISOString() });
-    saveInventory(inventory);
-    loadInventory();
-    updateDashboard();
-    updateCharts();
-    updateRecentActivity();
-    checkNotifications();
-    populateYearDropdown();
-    renderRecords();
-    updateCalendarBadge();
-    document.getElementById('add-form').reset();
 }
 
-function deleteMaterial(id) {
+async function deleteMaterial(id) {
     if (confirm('Are you sure you want to delete this material?')) {
-        const inventory = getInventory();
-        const updatedInventory = inventory.filter(item => item.id !== id);
-        saveInventory(updatedInventory);
-        loadInventory();
-        updateDashboard();
-        updateCharts();
-        updateRecentActivity();
-        checkNotifications();
-        populateYearDropdown();
-        renderRecords();
-        updateCalendarBadge();
+        try {
+            const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.error || 'Failed to delete material');
+                return;
+            }
+            await syncInventory();
+        } catch (error) {
+            alert('Failed to delete material. Make sure the backend is running.');
+        }
     }
 }
 
@@ -427,12 +418,27 @@ function checkNotifications() {
 }
 
 function getInventory() {
-    const inventory = localStorage.getItem('dpwh-inventory');
-    return inventory ? JSON.parse(inventory) : [];
+    return inventoryCache;
 }
 
-function saveInventory(inventory) {
-    localStorage.setItem('dpwh-inventory', JSON.stringify(inventory));
+async function syncInventory() {
+    try {
+        const res = await fetch('/api/inventory');
+        if (!res.ok) throw new Error('Failed to fetch inventory');
+        inventoryCache = await res.json();
+    } catch (error) {
+        console.error('Failed to sync inventory', error);
+        inventoryCache = [];
+    }
+    loadInventory();
+    updateDashboard();
+    updateCharts();
+    updateRecentActivity();
+    checkNotifications();
+    populateYearDropdown();
+    renderRecords();
+    updateCalendarBadge();
+    renderCalendar();
 }
 
 function addNewCategory() {
@@ -716,7 +722,7 @@ function closeEditModal() {
     document.getElementById('edit-modal').style.display = 'none';
 }
 
-function saveEdit() {
+async function saveEdit() {
     const originalId = document.getElementById('edit-original-id').value;
     const id = document.getElementById('edit-item-id').value.trim();
     const name = document.getElementById('edit-item-name').value.trim();
@@ -733,39 +739,27 @@ function saveEdit() {
     }
 
     let inventory = getInventory();
-    const index = inventory.findIndex(item => item.id === originalId);
-    if (index === -1) {
-        alert('Item not found');
-        return;
-    }
-
     if (id !== originalId && inventory.some(item => item.id === id)) {
         alert('Item ID already exists');
         return;
     }
 
-    inventory[index] = {
-        ...inventory[index],
-        id,
-        name,
-        category,
-        unit,
-        status,
-        maintenanceExpiry,
-        calibrationSchedule,
-        remarks
-    };
-
-    saveInventory(inventory);
-    loadInventory();
-    updateDashboard();
-    updateCharts();
-    updateRecentActivity();
-    checkNotifications();
-    populateYearDropdown();
-    renderRecords();
-    updateCalendarBadge();
-    closeEditModal();
+    try {
+        const res = await fetch(`/api/inventory/${originalId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to update material');
+            return;
+        }
+        closeEditModal();
+        await syncInventory();
+    } catch (error) {
+        alert('Failed to update material. Make sure the backend is running.');
+    }
 }
 
 function deleteFromRecords(id) {
