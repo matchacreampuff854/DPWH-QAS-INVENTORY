@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Data files (keep inventory private)
+Backend/data/
+*.json
+
+# Environment
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
