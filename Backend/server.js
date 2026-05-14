@@ -10,6 +10,9 @@ const DATA_FILE = path.join(__dirname, 'data', 'inventory.json');
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the parent directory (where index.html, app.html are)
+app.use(express.static(path.join(__dirname, '..')));
+
 // Ensure data file exists
 function ensureDataFile() {
     const dir = path.dirname(DATA_FILE);

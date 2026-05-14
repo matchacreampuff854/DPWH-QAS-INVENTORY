@@ -9,5 +9,16 @@
     "calibrationSchedule": "2026-05-16",
     "remarks": "VFDH",
     "createdAt": "2026-05-14T06:36:32.520Z"
+  },
+  {
+    "id": "EQ-1778741577228",
+    "name": "AWA",
+    "category": "Asphaltic Materials & Asphalt Mixes",
+    "unit": "set",
+    "status": "not-functioning",
+    "maintenanceExpiry": "2026-06-06",
+    "calibrationSchedule": "2026-05-30",
+    "remarks": "dfiu",
+    "createdAt": "2026-05-14T06:52:57.258Z"
   }
 ]
