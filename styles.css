@@ -922,8 +922,8 @@ canvas {
 .category-input-group,
 .unit-input-group {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
 }
 
 .category-input-group select,
@@ -931,8 +931,18 @@ canvas {
     width: 100%;
 }
 
+.btn-remove-category,
+.btn-remove-unit {
+    min-width: 54px;
+    border-radius: 14px;
+    font-size: 1.2rem;
+    padding: 0 10px;
+}
+
 .btn-add-category,
-.btn-add-unit {
+.btn-add-unit,
+.btn-remove-category,
+.btn-remove-unit {
     border: none;
     min-width: 54px;
     border-radius: 14px;
@@ -947,7 +957,9 @@ canvas {
 }
 
 .btn-add-category:hover,
-.btn-add-unit:hover {
+.btn-add-unit:hover,
+.btn-remove-category:hover,
+.btn-remove-unit:hover {
     background: rgba(255, 111, 31, 0.22);
     transform: translateY(-1px);
 }
@@ -1374,14 +1386,26 @@ canvas {
     font-size: 0.95rem;
 }
 
-.category-modal .modal-actions {
-    justify-content: space-between;
+.popup-modal .modal-actions {
+    justify-content: center;
+    gap: 16px;
     margin-top: 24px;
 }
 
-.category-modal .btn-tertiary,
-.category-modal .btn-primary {
+.popup-modal .btn-tertiary,
+.popup-modal .btn-primary {
     min-width: 130px;
+}
+
+#confirm-modal .modal-actions {
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+#confirm-modal .btn-tertiary,
+#confirm-modal .btn-primary {
+    min-width: 120px;
 }
 
 /* Print Template (hidden on screen) */

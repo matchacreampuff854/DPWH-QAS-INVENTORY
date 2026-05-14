@@ -147,6 +147,7 @@
                                         <option value="Test on Concrete">Test on Concrete</option>
                                     </select>
                                     <button type="button" id="add-category-btn" class="btn btn-secondary btn-add-category" title="Add new category">+</button>
+                                    <button type="button" id="remove-category-btn" class="btn btn-danger btn-remove-category" title="Remove selected category">−</button>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -163,6 +164,7 @@
                                         <option value="pair">pair</option>
                                     </select>
                                     <button type="button" id="add-unit-btn" class="btn btn-secondary btn-add-unit" title="Add new unit">+</button>
+                                    <button type="button" id="remove-unit-btn" class="btn btn-danger btn-remove-unit" title="Remove selected unit">−</button>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -357,6 +359,19 @@
                     <div class="modal-actions">
                         <button type="button" id="unit-modal-cancel" class="btn btn-tertiary">Cancel</button>
                         <button type="button" id="unit-modal-submit" class="btn btn-primary">Save Unit</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="confirm-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closeConfirmModal()"></div>
+                <div class="modal-content popup-modal">
+                    <button type="button" id="confirm-modal-close" class="modal-close" onclick="closeConfirmModal()">&times;</button>
+                    <h3 id="confirm-modal-title">Confirm</h3>
+                    <p id="confirm-modal-text" class="modal-subtitle">Are you sure?</p>
+                    <div class="modal-actions">
+                        <button type="button" id="confirm-modal-cancel" class="btn btn-tertiary">Cancel</button>
+                        <button type="button" id="confirm-modal-yes" class="btn btn-primary">Remove</button>
                     </div>
                 </div>
             </div>
