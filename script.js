@@ -12,6 +12,7 @@ let completedTasks = [];
 let calCurrentDate = new Date();
 let calSelectedDate = null;
 let inventoryCache = [];
+let pendingConfirmAction = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     loadUnits();
@@ -61,10 +62,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         openCategoryModal();
     });
 
+    const removeCategoryBtn = document.getElementById('remove-category-btn');
+    if (removeCategoryBtn) {
+        removeCategoryBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            removeSelectedCategory();
+        });
+    }
+
     document.getElementById('add-unit-btn').addEventListener('click', function(e) {
         e.preventDefault();
         openUnitModal();
     });
+
+    const removeUnitBtn = document.getElementById('remove-unit-btn');
+    if (removeUnitBtn) {
+        removeUnitBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            removeSelectedUnit();
+        });
+    }
 
     const categoryModalSubmit = document.getElementById('category-modal-submit');
     const categoryModalCancel = document.getElementById('category-modal-cancel');
@@ -75,6 +92,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     const unitModalCancel = document.getElementById('unit-modal-cancel');
     const unitModalClose = document.getElementById('unit-modal-close');
     const newUnitInput = document.getElementById('new-unit-input');
+
+    const confirmModalYes = document.getElementById('confirm-modal-yes');
+    const confirmModalCancel = document.getElementById('confirm-modal-cancel');
+    const confirmModalClose = document.getElementById('confirm-modal-close');
+
+    if (confirmModalYes) {
+        confirmModalYes.addEventListener('click', function() {
+            if (pendingConfirmAction) {
+                pendingConfirmAction();
+            }
+            closeConfirmModal();
+        });
+    }
+    if (confirmModalCancel) {
+        confirmModalCancel.addEventListener('click', closeConfirmModal);
+    }
+    if (confirmModalClose) {
+        confirmModalClose.addEventListener('click', closeConfirmModal);
+    }
 
     if (categoryModalSubmit) {
         categoryModalSubmit.addEventListener('click', submitNewCategory);
@@ -226,6 +262,110 @@ function addUnitOption(unitName) {
         select.appendChild(option);
         select.value = unitName;
     }
+}
+
+function openConfirmModal(title, message, actionLabel, actionCallback) {
+    const modal = document.getElementById('confirm-modal');
+    const titleElement = document.getElementById('confirm-modal-title');
+    const textElement = document.getElementById('confirm-modal-text');
+    const yesButton = document.getElementById('confirm-modal-yes');
+    if (!modal || !titleElement || !textElement || !yesButton) return;
+
+    titleElement.textContent = title;
+    textElement.textContent = message;
+    yesButton.textContent = actionLabel || 'Confirm';
+    pendingConfirmAction = actionCallback;
+    modal.style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirm-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    pendingConfirmAction = null;
+}
+
+function removeSelectedCategory() {
+    const select = document.getElementById('item-category');
+    if (!select) return;
+
+    const selectedValue = select.value;
+    if (!selectedValue) {
+        alert('Please choose a category to remove first.');
+        return;
+    }
+
+    const inUse = inventoryCache.some(item => item.category === selectedValue);
+    if (inUse) {
+        alert('Cannot remove this category because it is already used by an inventory item.');
+        return;
+    }
+
+    openConfirmModal(
+        'Remove Category',
+        `Remove category "${selectedValue}"?`,
+        'Remove',
+        function() {
+            const optionIndex = Array.from(select.options).findIndex(opt => opt.value === selectedValue);
+            if (optionIndex >= 0) {
+                select.remove(optionIndex);
+            }
+
+            const categoryIndex = categories.indexOf(selectedValue);
+            if (categoryIndex >= 0) {
+                categories.splice(categoryIndex, 1);
+            }
+
+            const editCategorySelect = document.getElementById('edit-item-category');
+            if (editCategorySelect) {
+                const editOption = Array.from(editCategorySelect.options).find(opt => opt.value === selectedValue);
+                if (editOption) {
+                    editCategorySelect.remove(editOption.index);
+                }
+            }
+
+            select.value = '';
+        }
+    );
+}
+
+
+function removeSelectedUnit() {
+    const select = document.getElementById('item-unit');
+    if (!select) return;
+
+    const selectedValue = select.value;
+    if (!selectedValue) {
+        alert('Please choose a unit to remove first.');
+        return;
+    }
+
+    const inUse = inventoryCache.some(item => item.unit === selectedValue);
+    if (inUse) {
+        alert('Cannot remove this unit because it is already used by an inventory item.');
+        return;
+    }
+
+    openConfirmModal(
+        'Remove Unit',
+        `Remove unit "${selectedValue}"?`,
+        'Remove',
+        function() {
+            const optionIndex = Array.from(select.options).findIndex(opt => opt.value === selectedValue);
+            if (optionIndex >= 0) {
+                select.remove(optionIndex);
+            }
+
+            const unitIndex = units.indexOf(selectedValue);
+            if (unitIndex >= 0) {
+                units.splice(unitIndex, 1);
+                saveUnits();
+            }
+
+            select.value = '';
+        }
+    );
 }
 
 function loadInventory() {
