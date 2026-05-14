@@ -324,6 +324,43 @@
                 </div>
             </section>
 
+            <!-- Add Category Modal -->
+            <div id="category-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closeCategoryModal()"></div>
+                <div class="modal-content popup-modal">
+                    <button type="button" id="category-modal-close" class="modal-close" onclick="closeCategoryModal()">&times;</button>
+                    <h3>Add New Category</h3>
+                    <p class="modal-subtitle">Enter the Apparatus / Equipment category name you want to add.</p>
+                    <div class="form-group">
+                        <label for="new-category-input">Category name</label>
+                        <input type="text" id="new-category-input" placeholder="e.g. Geotechnical Instruments">
+                        <p id="modal-category-error" class="modal-error"></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="category-modal-cancel" class="btn btn-tertiary">Cancel</button>
+                        <button type="button" id="category-modal-submit" class="btn btn-primary">Save Category</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="unit-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closeUnitModal()"></div>
+                <div class="modal-content popup-modal">
+                    <button type="button" id="unit-modal-close" class="modal-close" onclick="closeUnitModal()">&times;</button>
+                    <h3>Add New Unit</h3>
+                    <p class="modal-subtitle">Enter a new measurement unit for materials.</p>
+                    <div class="form-group">
+                        <label for="new-unit-input">Unit of measure</label>
+                        <input type="text" id="new-unit-input" placeholder="e.g. box, bundle, roll">
+                        <p id="modal-unit-error" class="modal-error"></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" id="unit-modal-cancel" class="btn btn-tertiary">Cancel</button>
+                        <button type="button" id="unit-modal-submit" class="btn btn-primary">Save Unit</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Edit Modal -->
             <div id="edit-modal" class="modal" style="display: none;">
                 <div class="modal-overlay" onclick="closeEditModal()"></div>
