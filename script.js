@@ -53,13 +53,59 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     document.getElementById('add-category-btn').addEventListener('click', function(e) {
         e.preventDefault();
-        addNewCategory();
+        openCategoryModal();
     });
 
     document.getElementById('add-unit-btn').addEventListener('click', function(e) {
         e.preventDefault();
-        addNewUnit();
+        openUnitModal();
     });
+
+    const categoryModalSubmit = document.getElementById('category-modal-submit');
+    const categoryModalCancel = document.getElementById('category-modal-cancel');
+    const categoryModalClose = document.getElementById('category-modal-close');
+    const newCategoryInput = document.getElementById('new-category-input');
+
+    const unitModalSubmit = document.getElementById('unit-modal-submit');
+    const unitModalCancel = document.getElementById('unit-modal-cancel');
+    const unitModalClose = document.getElementById('unit-modal-close');
+    const newUnitInput = document.getElementById('new-unit-input');
+
+    if (categoryModalSubmit) {
+        categoryModalSubmit.addEventListener('click', submitNewCategory);
+    }
+    if (categoryModalCancel) {
+        categoryModalCancel.addEventListener('click', closeCategoryModal);
+    }
+    if (categoryModalClose) {
+        categoryModalClose.addEventListener('click', closeCategoryModal);
+    }
+    if (newCategoryInput) {
+        newCategoryInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitNewCategory();
+            }
+        });
+    }
+
+    if (unitModalSubmit) {
+        unitModalSubmit.addEventListener('click', submitNewUnit);
+    }
+    if (unitModalCancel) {
+        unitModalCancel.addEventListener('click', closeUnitModal);
+    }
+    if (unitModalClose) {
+        unitModalClose.addEventListener('click', closeUnitModal);
+    }
+    if (newUnitInput) {
+        newUnitInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitNewUnit();
+            }
+        });
+    }
 
     const yearSelect = document.getElementById('records-year');
     if (yearSelect) {
@@ -122,21 +168,58 @@ function populateUnitSelect() {
 }
 
 function addNewUnit() {
-    try {
-        const unitName = prompt('Enter new unit of measure:') || '';
-        if (unitName && unitName.trim() !== '') {
-            const normalized = unitName.trim().toLowerCase();
-            if (!units.includes(normalized)) {
-                units.push(normalized);
-                saveUnits();
-                populateUnitSelect();
-                document.getElementById('item-unit').value = normalized;
-            } else {
-                alert('This unit already exists.');
-            }
-        }
-    } catch (e) {
-        console.log('Could not add unit. Please try again.');
+    openUnitModal();
+}
+
+function openUnitModal() {
+    const modal = document.getElementById('unit-modal');
+    const input = document.getElementById('new-unit-input');
+    const error = document.getElementById('modal-unit-error');
+    if (!modal || !input || !error) return;
+    error.textContent = '';
+    input.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+}
+
+function closeUnitModal() {
+    const modal = document.getElementById('unit-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function submitNewUnit() {
+    const input = document.getElementById('new-unit-input');
+    const error = document.getElementById('modal-unit-error');
+    if (!input || !error) return;
+
+    const unitName = input.value.trim();
+    if (!unitName) {
+        error.textContent = 'Please type a unit name.';
+        return;
+    }
+
+    const normalized = unitName.toLowerCase();
+    if (units.includes(normalized)) {
+        error.textContent = 'This unit already exists.';
+        return;
+    }
+
+    units.push(normalized);
+    saveUnits();
+    addUnitOption(normalized);
+    closeUnitModal();
+}
+
+function addUnitOption(unitName) {
+    const select = document.getElementById('item-unit');
+    if (select) {
+        const option = document.createElement('option');
+        option.value = unitName;
+        option.textContent = unitName;
+        select.appendChild(option);
+        select.value = unitName;
     }
 }
 
@@ -441,23 +524,61 @@ async function syncInventory() {
     renderCalendar();
 }
 
-function addNewCategory() {
-    try {
-        const categoryName = prompt('Enter new category name:') || '';
-        if (categoryName && categoryName.trim() !== '') {
-            if (!categories.includes(categoryName)) {
-                categories.push(categoryName);
-                const select = document.getElementById('item-category');
-                const option = document.createElement('option');
-                option.value = categoryName;
-                option.textContent = categoryName;
-                select.appendChild(option);
-            } else {
-                alert('This category already exists.');
-            }
-        }
-    } catch (e) {
-        console.log('Could not add category. Please try again.');
+function openCategoryModal() {
+    const modal = document.getElementById('category-modal');
+    const input = document.getElementById('new-category-input');
+    const error = document.getElementById('modal-category-error');
+    if (!modal || !input || !error) return;
+    error.textContent = '';
+    input.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+}
+
+function closeCategoryModal() {
+    const modal = document.getElementById('category-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function submitNewCategory() {
+    const input = document.getElementById('new-category-input');
+    const error = document.getElementById('modal-category-error');
+    if (!input || !error) return;
+
+    const categoryName = input.value.trim();
+    if (!categoryName) {
+        error.textContent = 'Please type a category name.';
+        return;
+    }
+
+    if (categories.includes(categoryName)) {
+        error.textContent = 'This category already exists.';
+        return;
+    }
+
+    categories.push(categoryName);
+    addCategoryOption(categoryName);
+    closeCategoryModal();
+}
+
+function addCategoryOption(categoryName) {
+    const select = document.getElementById('item-category');
+    if (select) {
+        const option = document.createElement('option');
+        option.value = categoryName;
+        option.textContent = categoryName;
+        select.appendChild(option);
+        select.value = categoryName;
+    }
+
+    const editCategorySelect = document.getElementById('edit-item-category');
+    if (editCategorySelect) {
+        const option = document.createElement('option');
+        option.value = categoryName;
+        option.textContent = categoryName;
+        editCategorySelect.appendChild(option);
     }
 }
 
