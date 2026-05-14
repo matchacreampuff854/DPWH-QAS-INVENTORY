@@ -148,7 +148,6 @@ function loadInventory() {
     inventory.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${item.id}</td>
             <td>${item.name}</td>
             <td>${item.category}</td>
             <td>${item.unit || item.quantity || 'N/A'}</td>
@@ -163,7 +162,6 @@ function loadInventory() {
 }
 
 async function addMaterial() {
-    const id = document.getElementById('item-id').value.trim();
     const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
     const unit = document.getElementById('item-unit').value;
@@ -172,10 +170,12 @@ async function addMaterial() {
     const calibrationSchedule = document.getElementById('calibration-schedule').value;
     const remarks = document.getElementById('remarks').value.trim();
 
-    if (!id || !name || !category || !unit || !status) {
+    if (!name || !category || !unit || !status) {
         alert('Please fill in all required fields');
         return;
     }
+
+    const id = 'EQ-' + Date.now();
 
     try {
         const res = await fetch('/api/inventory', {
@@ -379,9 +379,9 @@ function checkNotifications() {
             const expiryDate = new Date(item.maintenanceExpiry);
             const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
             if (daysUntilExpiry <= warningDays && daysUntilExpiry >= 0) {
-                notifications.push(`Maintenance for ${item.name} (ID: ${item.id}) expires in ${daysUntilExpiry} days`);
+                notifications.push(`Maintenance for ${item.name} expires in ${daysUntilExpiry} days`);
             } else if (daysUntilExpiry < 0) {
-                notifications.push(`Maintenance for ${item.name} (ID: ${item.id}) has expired`);
+                notifications.push(`Maintenance for ${item.name} has expired`);
             }
         }
 
@@ -389,9 +389,9 @@ function checkNotifications() {
             const calibrationDate = new Date(item.calibrationSchedule);
             const daysUntilCalibration = Math.ceil((calibrationDate - today) / (1000 * 60 * 60 * 24));
             if (daysUntilCalibration <= warningDays && daysUntilCalibration >= 0) {
-                notifications.push(`Calibration for ${item.name} (ID: ${item.id}) scheduled in ${daysUntilCalibration} days`);
+                notifications.push(`Calibration for ${item.name} scheduled in ${daysUntilCalibration} days`);
             } else if (daysUntilCalibration < 0) {
-                notifications.push(`Calibration for ${item.name} (ID: ${item.id}) is overdue`);
+                notifications.push(`Calibration for ${item.name} is overdue`);
             }
         }
     });
@@ -631,7 +631,6 @@ function renderRecords() {
     // Search filter
     if (query) {
         inventory = inventory.filter(item =>
-            item.id.toLowerCase().includes(query) ||
             item.name.toLowerCase().includes(query) ||
             (item.category && item.category.toLowerCase().includes(query)) ||
             (item.unit && item.unit.toLowerCase().includes(query))
@@ -665,7 +664,6 @@ function renderRecords() {
 
         row.innerHTML = `
             <td><strong>${item.name}</strong></td>
-            <td>${item.id}</td>
             <td>${item.category}</td>
             <td>${item.unit || item.quantity || 'N/A'}</td>
             <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
@@ -688,7 +686,6 @@ function openEditModal(id) {
     if (!item) return;
 
     document.getElementById('edit-original-id').value = item.id;
-    document.getElementById('edit-item-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
     document.getElementById('edit-item-status').value = item.status;
     document.getElementById('edit-maintenance-expiry').value = item.maintenanceExpiry || '';
@@ -724,7 +721,6 @@ function closeEditModal() {
 
 async function saveEdit() {
     const originalId = document.getElementById('edit-original-id').value;
-    const id = document.getElementById('edit-item-id').value.trim();
     const name = document.getElementById('edit-item-name').value.trim();
     const category = document.getElementById('edit-item-category').value;
     const unit = document.getElementById('edit-item-unit').value;
@@ -733,14 +729,8 @@ async function saveEdit() {
     const calibrationSchedule = document.getElementById('edit-calibration-schedule').value;
     const remarks = document.getElementById('edit-remarks').value.trim();
 
-    if (!id || !name || !category || !unit || !status) {
+    if (!name || !category || !unit || !status) {
         alert('Please fill in all required fields');
-        return;
-    }
-
-    let inventory = getInventory();
-    if (id !== originalId && inventory.some(item => item.id === id)) {
-        alert('Item ID already exists');
         return;
     }
 
@@ -748,7 +738,7 @@ async function saveEdit() {
         const res = await fetch(`/api/inventory/${originalId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
+            body: JSON.stringify({ id: originalId, name, category, unit, status, maintenanceExpiry, calibrationSchedule, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -1159,7 +1149,6 @@ function searchInventory() {
     const query = document.getElementById('search-bar').value.toLowerCase();
     const inventory = getInventory();
     const filteredInventory = inventory.filter(item =>
-        item.id.toLowerCase().includes(query) ||
         item.name.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query)
     );
@@ -1168,14 +1157,13 @@ function searchInventory() {
     tbody.innerHTML = '';
 
     if (!filteredInventory.length) {
-        tbody.innerHTML = '<tr><td colspan="9">No matching materials found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">No matching materials found.</td></tr>';
         return;
     }
 
     filteredInventory.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${item.id}</td>
             <td>${item.name}</td>
             <td>${item.category}</td>
             <td>${item.unit || item.quantity || 'N/A'}</td>
