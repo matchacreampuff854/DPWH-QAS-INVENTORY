@@ -2,7 +2,7 @@
 
 let usageChart;
 let qualityChart;
-let categories = ['Chemicals', 'Soil Agg & Concrete & Asph Alt', 'Asphalt', 'Wood', 'Other'];
+let categories = ['Soil Aggregates & Asphalt Aggregates', 'Asphaltic Materials & Asphalt Mixes', 'Test on Concrete'];
 let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
 let completedTasks = [];
 let calCurrentDate = new Date();
