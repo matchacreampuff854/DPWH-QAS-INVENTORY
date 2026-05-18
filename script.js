@@ -1222,8 +1222,8 @@ function buildPrintHTML(inventory) {
                         <td>${escapeHtml(notFunctioning)}</td>
                         <td>${escapeHtml(noneVal)}</td>
                         <td>${escapeHtml(freq)}</td>
-                        <td>${escapeHtml(lastCal)}</td>
-                        <td>${escapeHtml(nextCal)}</td>
+                        <td class="date-cell">${escapeHtml(lastCal)}</td>
+                        <td class="date-cell">${escapeHtml(nextCal)}</td>
                         <td>${escapeHtml(item.remarks || '')}</td>
                     </tr>
                 `;
@@ -1237,22 +1237,24 @@ function buildPrintHTML(inventory) {
 <meta charset="UTF-8">
 <title>Checklist Print</title>
 <style>
-@page { size: A4 portrait; margin: 12mm; }
+@page { size: A4 landscape; margin: 10mm; }
 body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; background: #fff; }
-.form-header { margin-bottom: 14px; }
-.form-header h1 { text-align: center; font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 0 0 10px; letter-spacing: 0.5px; }
-.form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
+.form-header { margin-bottom: 10px; }
+.form-header h1 { text-align: center; font-size: 14pt; font-weight: 700; text-transform: uppercase; margin: 0 0 8px; letter-spacing: 0.5px; }
+.form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 6px; margin-bottom: 8px; }
 .form-meta p { margin: 2px 0; }
-.print-checklist { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; }
-.print-checklist thead th { border: 1.5px solid #000; padding: 4px 3px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
-.print-checklist tbody td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-wrap: break-word; }
+.print-checklist { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+.print-checklist thead th { border: 1.5px solid #000; padding: 5px 4px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
+.print-checklist tbody td { border: 1px solid #000; padding: 4px 5px; vertical-align: middle; text-align: center; word-wrap: break-word; }
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
-.print-checklist .category-header { background: #d5d5d5; font-weight: 700; text-align: left; padding: 4px 5px; border: 1px solid #000; font-size: 8.5pt; }
+.print-checklist .category-header { background: #0f4fa8 !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
-.print-checklist thead tr:first-child th:nth-child(2) { width: 8%; }
-.print-checklist thead tr:first-child th:nth-child(3) { width: 24%; }
-.print-checklist thead tr:first-child th:nth-child(4) { width: 26%; }
-.print-checklist thead tr:first-child th:nth-child(5) { width: 20%; }
+.print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
+.print-checklist thead tr:first-child th:nth-child(3) { width: 21%; }
+.print-checklist thead tr:first-child th:nth-child(4) { width: 24%; }
+.print-checklist thead tr:first-child th:nth-child(5) { width: 16%; }
+.print-checklist thead tr:nth-child(2) th { width: 7%; }
+.print-checklist td.date-cell { white-space: nowrap; }
 </style>
 </head>
 <body>
