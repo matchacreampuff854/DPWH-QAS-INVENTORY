@@ -13,6 +13,8 @@ let calCurrentDate = new Date();
 let calSelectedDate = null;
 let inventoryCache = [];
 let pendingConfirmAction = null;
+let autoRefreshInterval = null;
+const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
 
 document.addEventListener('DOMContentLoaded', async function() {
     loadUnits();
@@ -21,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadCompletedTasks();
     await checkBackendHealth();
     await syncInventory();
+    startAutoRefresh();
+
+    // Instant sync when user returns to this browser tab
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            syncInventory();
+        }
+    });
 
     document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
     document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
@@ -874,6 +884,7 @@ function switchTab(target) {
             records.classList.add('active');
             renderRecords();
         }
+        startAutoRefresh();
     } else if (target === 'materials') {
         if (metrics) metrics.style.display = 'none';
         if (charts) charts.style.display = 'none';
@@ -887,6 +898,7 @@ function switchTab(target) {
         if (addSection) addSection.style.display = 'none';
         if (listSection) listSection.style.display = 'block';
         document.querySelector('.inventory-layout').scrollIntoView({ behavior: 'smooth' });
+        startAutoRefresh();
     } else {
         if (metrics) metrics.style.display = 'grid';
         if (charts) charts.style.display = 'grid';
@@ -899,6 +911,66 @@ function switchTab(target) {
         const listSection = document.getElementById('inventory-list');
         if (addSection) addSection.style.display = 'block';
         if (listSection) listSection.style.display = 'block';
+        startAutoRefresh();
+    }
+}
+
+function inventoryHash(inv) {
+    // Stable hash for deep comparison, sorted by ID
+    return JSON.stringify(inv.slice().sort((a, b) => (a.id || '').localeCompare(b.id || '')));
+}
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(async () => {
+        const prevHash = inventoryHash(inventoryCache);
+        await syncInventory();
+        const newHash = inventoryHash(inventoryCache);
+        if (prevHash !== newHash) {
+            // Data changed (add, edit, or delete) — re-render whatever is visible
+            const recordsSection = document.getElementById('records-section');
+            const listSection = document.getElementById('inventory-list');
+            if (recordsSection && recordsSection.style.display === 'block') {
+                renderRecords();
+                flashSyncIndicator('Records updated');
+            } else if (listSection && listSection.style.display === 'block') {
+                loadInventory();
+                updateRecentActivity();
+                flashSyncIndicator('Inventory updated');
+            } else {
+                // Dashboard view — refresh everything silently
+                loadInventory();
+                updateDashboard();
+                updateCharts();
+                updateRecentActivity();
+                checkNotifications();
+                updateCalendarBadge();
+                renderCalendar();
+                flashSyncIndicator('Dashboard updated');
+            }
+        }
+    }, AUTO_REFRESH_MS);
+}
+
+function flashSyncIndicator(message) {
+    const countLabel = document.getElementById('records-count');
+    if (countLabel && message) {
+        const original = countLabel.textContent;
+        countLabel.textContent = '↻ ' + message;
+        countLabel.style.color = '#0f4fa8';
+        countLabel.style.fontWeight = '700';
+        setTimeout(() => {
+            countLabel.textContent = original;
+            countLabel.style.color = '';
+            countLabel.style.fontWeight = '';
+        }, 2000);
+    }
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
     }
 }
 
@@ -1229,8 +1301,8 @@ function buildPrintHTML(inventory) {
                         <td>${escapeHtml(notFunctioning)}</td>
                         <td>${escapeHtml(noneVal)}</td>
                         <td>${escapeHtml(freq)}</td>
-                        <td>${escapeHtml(lastCal)}</td>
-                        <td>${escapeHtml(nextCal)}</td>
+                        <td class="date-cell">${escapeHtml(lastCal)}</td>
+                        <td class="date-cell">${escapeHtml(nextCal)}</td>
                         <td>${escapeHtml(item.remarks || '')}</td>
                     </tr>
                 `;
@@ -1244,22 +1316,24 @@ function buildPrintHTML(inventory) {
 <meta charset="UTF-8">
 <title>Checklist Print</title>
 <style>
-@page { size: A4 portrait; margin: 12mm; }
+@page { size: A4 landscape; margin: 10mm; }
 body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; background: #fff; }
-.form-header { margin-bottom: 14px; }
-.form-header h1 { text-align: center; font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 0 0 10px; letter-spacing: 0.5px; }
-.form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
+.form-header { margin-bottom: 10px; }
+.form-header h1 { text-align: center; font-size: 14pt; font-weight: 700; text-transform: uppercase; margin: 0 0 8px; letter-spacing: 0.5px; }
+.form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 6px; margin-bottom: 8px; }
 .form-meta p { margin: 2px 0; }
-.print-checklist { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; }
-.print-checklist thead th { border: 1.5px solid #000; padding: 4px 3px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
-.print-checklist tbody td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-wrap: break-word; }
+.print-checklist { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
+.print-checklist thead th { border: 1.5px solid #000; padding: 5px 4px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
+.print-checklist tbody td { border: 1px solid #000; padding: 4px 5px; vertical-align: middle; text-align: center; word-wrap: break-word; }
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
-.print-checklist .category-header { background: #d5d5d5; font-weight: 700; text-align: left; padding: 4px 5px; border: 1px solid #000; font-size: 8.5pt; }
+.print-checklist .category-header { background: #0f4fa8 !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
-.print-checklist thead tr:first-child th:nth-child(2) { width: 8%; }
-.print-checklist thead tr:first-child th:nth-child(3) { width: 24%; }
-.print-checklist thead tr:first-child th:nth-child(4) { width: 26%; }
-.print-checklist thead tr:first-child th:nth-child(5) { width: 20%; }
+.print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
+.print-checklist thead tr:first-child th:nth-child(3) { width: 21%; }
+.print-checklist thead tr:first-child th:nth-child(4) { width: 24%; }
+.print-checklist thead tr:first-child th:nth-child(5) { width: 16%; }
+.print-checklist thead tr:nth-child(2) th { width: 7%; }
+.print-checklist td.date-cell { white-space: nowrap; }
 </style>
 </head>
 <body>
