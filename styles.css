@@ -690,13 +690,13 @@ a.brand-mark.logo-mark {
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    gap: 15px;
 }
 
 .metric-card {
     background: #ffffff;
-    border-radius: 24px;
-    padding: 28px;
+    border-radius: 22px;
+    padding: 25px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(15, 79, 168, 0.08);
 }
@@ -722,8 +722,10 @@ a.brand-mark.logo-mark {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+    grid-auto-rows: minmax(520px, auto);
 }
 
 .card {
@@ -732,6 +734,7 @@ a.brand-mark.logo-mark {
     padding: 26px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(15, 79, 168, 0.08);
+    min-width: 0;
 }
 
 .card-header {
@@ -747,27 +750,43 @@ a.brand-mark.logo-mark {
 }
 
 .chart-card {
-    min-height: 420px;
+    min-height: 560px;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    flex-shrink: 0;
 }
 
 .chart-wrapper {
-    height: 100%;
+    flex: 1;
+    position: relative;
+    min-height: 420px;
+    padding-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-canvas {
+.chart-wrapper canvas {
     width: 100% !important;
     height: 100% !important;
+    display: block;
 }
 
 .inventory-layout {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 20px;
+    align-items: start;
+    grid-auto-rows: minmax(0, auto);
 }
 
 .inventory-panel,
 .activity-panel {
     padding: 24px;
+    min-height: 420px;
 }
 
 .inventory-panel .card-header,
