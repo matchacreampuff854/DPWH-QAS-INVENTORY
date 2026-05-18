@@ -13,6 +13,8 @@ let calCurrentDate = new Date();
 let calSelectedDate = null;
 let inventoryCache = [];
 let pendingConfirmAction = null;
+let autoRefreshInterval = null;
+const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
 
 document.addEventListener('DOMContentLoaded', async function() {
     loadUnits();
@@ -867,6 +869,7 @@ function switchTab(target) {
             records.classList.add('active');
             renderRecords();
         }
+        startAutoRefresh();
     } else if (target === 'materials') {
         if (metrics) metrics.style.display = 'none';
         if (charts) charts.style.display = 'none';
@@ -880,6 +883,7 @@ function switchTab(target) {
         if (addSection) addSection.style.display = 'none';
         if (listSection) listSection.style.display = 'block';
         document.querySelector('.inventory-layout').scrollIntoView({ behavior: 'smooth' });
+        startAutoRefresh();
     } else {
         if (metrics) metrics.style.display = 'grid';
         if (charts) charts.style.display = 'grid';
@@ -892,6 +896,29 @@ function switchTab(target) {
         const listSection = document.getElementById('inventory-list');
         if (addSection) addSection.style.display = 'block';
         if (listSection) listSection.style.display = 'block';
+        startAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(async () => {
+        const prevCount = inventoryCache.length;
+        await syncInventory();
+        if (inventoryCache.length !== prevCount) {
+            // Only re-render if data changed
+            const recordsSection = document.getElementById('records-section');
+            if (recordsSection && recordsSection.style.display === 'block') {
+                renderRecords();
+            }
+        }
+    }, AUTO_REFRESH_MS);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
     }
 }
 
