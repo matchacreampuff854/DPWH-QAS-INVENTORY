@@ -23,6 +23,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadCompletedTasks();
     await checkBackendHealth();
     await syncInventory();
+    startAutoRefresh();
+
+    // Instant sync when user returns to this browser tab
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            syncInventory();
+        }
+    });
 
     document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
     document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
@@ -900,19 +908,56 @@ function switchTab(target) {
     }
 }
 
+function inventoryHash(inv) {
+    // Stable hash for deep comparison, sorted by ID
+    return JSON.stringify(inv.slice().sort((a, b) => (a.id || '').localeCompare(b.id || '')));
+}
+
 function startAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(async () => {
-        const prevCount = inventoryCache.length;
+        const prevHash = inventoryHash(inventoryCache);
         await syncInventory();
-        if (inventoryCache.length !== prevCount) {
-            // Only re-render if data changed
+        const newHash = inventoryHash(inventoryCache);
+        if (prevHash !== newHash) {
+            // Data changed (add, edit, or delete) — re-render whatever is visible
             const recordsSection = document.getElementById('records-section');
+            const listSection = document.getElementById('inventory-list');
             if (recordsSection && recordsSection.style.display === 'block') {
                 renderRecords();
+                flashSyncIndicator('Records updated');
+            } else if (listSection && listSection.style.display === 'block') {
+                loadInventory();
+                updateRecentActivity();
+                flashSyncIndicator('Inventory updated');
+            } else {
+                // Dashboard view — refresh everything silently
+                loadInventory();
+                updateDashboard();
+                updateCharts();
+                updateRecentActivity();
+                checkNotifications();
+                updateCalendarBadge();
+                renderCalendar();
+                flashSyncIndicator('Dashboard updated');
             }
         }
     }, AUTO_REFRESH_MS);
+}
+
+function flashSyncIndicator(message) {
+    const countLabel = document.getElementById('records-count');
+    if (countLabel && message) {
+        const original = countLabel.textContent;
+        countLabel.textContent = '↻ ' + message;
+        countLabel.style.color = '#0f4fa8';
+        countLabel.style.fontWeight = '700';
+        setTimeout(() => {
+            countLabel.textContent = original;
+            countLabel.style.color = '';
+            countLabel.style.fontWeight = '';
+        }, 2000);
+    }
 }
 
 function stopAutoRefresh() {
