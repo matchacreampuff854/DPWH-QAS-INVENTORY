@@ -635,6 +635,17 @@ a.brand-mark.logo-mark {
     font-weight: 700;
 }
 
+.cal-day.today {
+    background: #0f4fa8;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+}
+
+.cal-day.selected.today {
+    background: linear-gradient(135deg, #ff6f1f, #0f4fa8);
+}
+
 .cal-day.has-tasks::after {
     content: '';
     width: 5px;

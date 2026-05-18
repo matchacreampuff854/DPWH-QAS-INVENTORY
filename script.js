@@ -402,6 +402,12 @@ function getDateLastCalibrated(item) {
 }
 
 function loadInventory() {
+    const searchBar = document.getElementById('search-bar');
+    if (searchBar && searchBar.value.trim()) {
+        searchInventory();
+        return;
+    }
+
     const inventory = getInventory();
     const tbody = document.getElementById('inventory-body');
     tbody.innerHTML = '';
@@ -1492,10 +1498,15 @@ function renderCalendar() {
     }
 
     // Current month days
+    const todayObj = new Date();
+    const todayYear = todayObj.getFullYear();
+    const todayMonth = todayObj.getMonth();
+    const todayDate = todayObj.getDate();
     for (let day = 1; day <= daysInMonth; day++) {
         const taskClass = hasTaskOnDay(year, month, day) ? 'has-tasks' : '';
         const selectedClass = (calSelectedDate && calSelectedDate.getFullYear() === year && calSelectedDate.getMonth() === month && calSelectedDate.getDate() === day) ? 'selected' : '';
-        html += `<div class="cal-day ${taskClass} ${selectedClass}" onclick="selectCalendarDay(${year}, ${month}, ${day})">${day}</div>`;
+        const todayClass = (year === todayYear && month === todayMonth && day === todayDate) ? 'today' : '';
+        html += `<div class="cal-day ${taskClass} ${selectedClass} ${todayClass}" onclick="selectCalendarDay(${year}, ${month}, ${day})">${day}</div>`;
     }
 
     // Next month filler
