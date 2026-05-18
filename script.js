@@ -26,6 +26,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
     document.getElementById('cal-next').addEventListener('click', () => changeCalendarMonth(1));
 
+    const calPopup = document.getElementById('calendar-popup');
+    if (calPopup) {
+        calPopup.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+
     document.getElementById('notification-btn').addEventListener('click', toggleNotificationDropdown);
 
     document.addEventListener('click', function(e) {

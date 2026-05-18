@@ -56,5 +56,41 @@
     "scheduleDateOfNextCalibration": "2026-06-01",
     "remarks": "joemarrr",
     "createdAt": "2026-05-18T01:21:33.572Z"
+  },
+  {
+    "id": "EQ-1779070361075",
+    "name": "Apparatus",
+    "category": "Asphaltic Materials & Asphalt Mixes",
+    "unit": "sack",
+    "quantityPerPhysicalCount": "functioning",
+    "frequencyAsPerDO": "2022",
+    "dateLastCalibrated": "2026-05-01",
+    "scheduleDateOfNextCalibration": "2026-06-01",
+    "remarks": "check",
+    "createdAt": "2026-05-18T02:12:41.391Z"
+  },
+  {
+    "id": "EQ-1779070515511",
+    "name": "add",
+    "category": "Soil Aggregates & Asphalt Aggregates",
+    "unit": "sack",
+    "quantityPerPhysicalCount": "not-functioning",
+    "frequencyAsPerDO": "add",
+    "dateLastCalibrated": "2026-05-01",
+    "scheduleDateOfNextCalibration": "2026-06-01",
+    "remarks": "add",
+    "createdAt": "2026-05-18T02:15:15.514Z"
+  },
+  {
+    "id": "EQ-1779073382524",
+    "name": "111",
+    "category": "Soil Aggregates & Asphalt Aggregates",
+    "unit": "set",
+    "quantityPerPhysicalCount": "functioning",
+    "frequencyAsPerDO": "111",
+    "dateLastCalibrated": "2026-05-01",
+    "scheduleDateOfNextCalibration": "2026-06-01",
+    "remarks": "112233",
+    "createdAt": "2026-05-18T03:03:02.529Z"
   }
 ]
