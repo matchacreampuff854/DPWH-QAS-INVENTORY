@@ -32,5 +32,17 @@
     "scheduleDateOfNextCalibration": "2026-05-15",
     "remarks": "defef",
     "createdAt": "2026-05-14T08:40:05.905Z"
+  },
+  {
+    "id": "EQ-1779066551769",
+    "name": "awaa",
+    "category": "Soil Aggregates & Asphalt Aggregates",
+    "unit": "pc",
+    "quantityPerPhysicalCount": "not-functioning",
+    "frequencyAsPerDO": "sdsd",
+    "dateLastCalibrated": "2026-05-19",
+    "scheduleDateOfNextCalibration": "2026-06-05",
+    "remarks": "dfef",
+    "createdAt": "2026-05-18T01:09:12.338Z"
   }
 ]
