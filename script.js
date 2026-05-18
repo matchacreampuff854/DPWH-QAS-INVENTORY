@@ -1103,6 +1103,10 @@ function renderRecords() {
             const freq = getFrequency(item);
             const lastCal = getDateLastCalibrated(item);
             const nextCal = getNextCalibration(item) || 'N/A';
+            const inputDate = item.createdAt
+                ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'Unknown date';
+            row.title = `Inputted on: ${inputDate}`;
 
             row.innerHTML = `
                 <td><span class="item-num">${catNum}.${idx + 1}</span> <strong>${item.name}</strong></td>
