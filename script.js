@@ -971,32 +971,50 @@ function renderRecords() {
         return;
     }
 
+    // Group by category
+    const grouped = {};
     inventory.forEach(item => {
-        const row = document.createElement('tr');
-        const qty = getQuantity(item);
-        const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
-        const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
-        const freq = getFrequency(item);
-        const lastCal = getDateLastCalibrated(item);
-        const nextCal = getNextCalibration(item) || 'N/A';
+        const cat = item.category || 'Uncategorized';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+    });
 
-        row.innerHTML = `
-            <td><strong>${item.name}</strong></td>
-            <td>${item.category}</td>
-            <td>${item.unit || 'N/A'}</td>
-            <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
-            <td>${freq}</td>
-            <td>${lastCal}</td>
-            <td>${nextCal}</td>
-            <td>${item.remarks || ''}</td>
-            <td>
-                <div class="action-btns">
-                    <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                    <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(row);
+    let catNum = 1;
+    Object.keys(grouped).sort().forEach(cat => {
+        // Category header row
+        const catRow = document.createElement('tr');
+        catRow.className = 'records-cat-header';
+        catRow.innerHTML = `<td colspan="9" class="records-cat-cell">${catNum}. ${cat.toUpperCase()}</td>`;
+        tbody.appendChild(catRow);
+
+        grouped[cat].forEach((item, idx) => {
+            const row = document.createElement('tr');
+            const qty = getQuantity(item);
+            const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
+            const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+            const freq = getFrequency(item);
+            const lastCal = getDateLastCalibrated(item);
+            const nextCal = getNextCalibration(item) || 'N/A';
+
+            row.innerHTML = `
+                <td><span class="item-num">${catNum}.${idx + 1}</span> <strong>${item.name}</strong></td>
+                <td>${item.category}</td>
+                <td>${item.unit || 'N/A'}</td>
+                <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+                <td>${freq}</td>
+                <td>${lastCal}</td>
+                <td>${nextCal}</td>
+                <td>${item.remarks || ''}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                        <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        catNum++;
     });
 }
 
@@ -1119,55 +1137,144 @@ function printRecords() {
         );
     }
 
-    const tbody = document.getElementById('print-body');
-    tbody.innerHTML = '';
+    // Build print HTML inside a hidden iframe for reliable rendering
+    const printHTML = buildPrintHTML(inventory);
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.top = '0';
+    iframe.style.left = '-9999px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(printHTML);
+    doc.close();
+
+    // Wait for iframe to load then print
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        // Clean up after print dialog closes
+        setTimeout(() => {
+            if (iframe.parentNode) {
+                document.body.removeChild(iframe);
+            }
+        }, 1000);
+    }, 300);
+}
+
+function buildPrintHTML(inventory) {
+    let rowsHTML = '';
 
     if (!inventory.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No records to print.</td></tr>';
-        window.print();
-        return;
+        rowsHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No records to print.</td></tr>';
+    } else {
+        // Group by category
+        const grouped = {};
+        inventory.forEach(item => {
+            const cat = item.category || 'Uncategorized';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(item);
+        });
+
+        Object.keys(grouped).sort().forEach(cat => {
+            rowsHTML += `<tr><td colspan="9" class="category-header">${cat.toUpperCase()}</td></tr>`;
+            grouped[cat].forEach((item, idx) => {
+                const qty = getQuantity(item);
+                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                const freq = item.frequencyAsPerDO || '';
+                const lastCal = item.dateLastCalibrated || '';
+                const nextCal = getNextCalibration(item) || '';
+
+                rowsHTML += `
+                    <tr>
+                        <td>${idx + 1}. ${escapeHtml(item.name)}</td>
+                        <td>${escapeHtml(item.unit || '')}</td>
+                        <td>${escapeHtml(functioning)}</td>
+                        <td>${escapeHtml(notFunctioning)}</td>
+                        <td>${escapeHtml(noneVal)}</td>
+                        <td>${escapeHtml(freq)}</td>
+                        <td>${escapeHtml(lastCal)}</td>
+                        <td>${escapeHtml(nextCal)}</td>
+                        <td>${escapeHtml(item.remarks || '')}</td>
+                    </tr>
+                `;
+            });
+        });
     }
 
-    // Group by category
-    const grouped = {};
-    inventory.forEach(item => {
-        const cat = item.category || 'Uncategorized';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(item);
-    });
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Checklist Print</title>
+<style>
+@page { size: A4 portrait; margin: 12mm; }
+body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; background: #fff; }
+.form-header { margin-bottom: 14px; }
+.form-header h1 { text-align: center; font-size: 13pt; font-weight: 700; text-transform: uppercase; margin: 0 0 10px; letter-spacing: 0.5px; }
+.form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 8px; margin-bottom: 10px; }
+.form-meta p { margin: 2px 0; }
+.print-checklist { width: 100%; border-collapse: collapse; font-size: 8pt; table-layout: fixed; }
+.print-checklist thead th { border: 1.5px solid #000; padding: 4px 3px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
+.print-checklist tbody td { border: 1px solid #000; padding: 3px 4px; vertical-align: middle; text-align: center; word-wrap: break-word; }
+.print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
+.print-checklist .category-header { background: #d5d5d5; font-weight: 700; text-align: left; padding: 4px 5px; border: 1px solid #000; font-size: 8.5pt; }
+.print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
+.print-checklist thead tr:first-child th:nth-child(2) { width: 8%; }
+.print-checklist thead tr:first-child th:nth-child(3) { width: 24%; }
+.print-checklist thead tr:first-child th:nth-child(4) { width: 26%; }
+.print-checklist thead tr:first-child th:nth-child(5) { width: 20%; }
+</style>
+</head>
+<body>
+<div class="form-header">
+    <h1>CHECKLIST OF LABORATORY EQUIPMENT/ APPARATUS</h1>
+    <div class="form-meta">
+        <p><strong>Office (RO/ DEO):</strong> <u>DEPARTMENT OF PUBLIC WORKS AND HIGHWAYS BULACAN FIRST DISTRICT ENGINEERING OFFICE</u></p>
+        <p><strong>Head of Office (RD/ DE):</strong> <u>KENNETH EDWARD FERNANDO - OIC - District Engineer</u></p>
+        <p><strong>Head of Unit: (Chief, QAHD/ QAS):</strong> <u>FERDINAND VERGARA JR. - Chief, Q.A.S</u></p>
+        <p><strong>Current Star Rating:</strong> <u>STAR II</u></p>
+    </div>
+</div>
+<table class="print-checklist">
+    <thead>
+        <tr>
+            <th rowspan="2">APPARATUS/ EQUIPMENT</th>
+            <th rowspan="2">Unit of<br>Measure</th>
+            <th colspan="3">Quantity per Physical Count</th>
+            <th colspan="3">Calibration</th>
+            <th rowspan="2">Remarks</th>
+        </tr>
+        <tr>
+            <th>Functioning</th>
+            <th>Not Functioning</th>
+            <th>None</th>
+            <th>Frequency as per<br>D.O. 184 S 2022</th>
+            <th>Date Last<br>Calibrated</th>
+            <th>Schedule Date of<br>Next Calibration</th>
+        </tr>
+    </thead>
+    <tbody>
+        ${rowsHTML}
+    </tbody>
+</table>
+</body>
+</html>`;
+}
 
-    Object.keys(grouped).sort().forEach(cat => {
-        // Category header row
-        const catRow = document.createElement('tr');
-        catRow.innerHTML = `<td colspan="9" class="category-header">${cat.toUpperCase()}</td>`;
-        tbody.appendChild(catRow);
-
-        grouped[cat].forEach((item, idx) => {
-            const row = document.createElement('tr');
-            const qty = getQuantity(item);
-            const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-            const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-            const noneVal = qty === 'none' ? (item.unit || '1') : '';
-            const freq = item.frequencyAsPerDO || '';
-            const lastCal = item.dateLastCalibrated || '';
-            const nextCal = getNextCalibration(item) || '';
-
-            row.innerHTML = `
-                <td>${idx + 1}. ${item.name}</td>
-                <td>${item.unit || ''}</td>
-                <td>${functioning}</td>
-                <td>${notFunctioning}</td>
-                <td>${noneVal}</td>
-                <td>${freq}</td>
-                <td>${lastCal}</td>
-                <td>${nextCal}</td>
-                <td>${item.remarks || ''}</td>
-            `;
-            tbody.appendChild(row);
-        });
-    });
-
-    window.print();
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
 function loadCompletedTasks() {

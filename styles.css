@@ -1171,6 +1171,33 @@ canvas {
     border: none;
 }
 
+.records-cat-header {
+    background: #0f4fa8 !important;
+}
+
+.records-cat-header .records-cat-cell {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: none;
+    background: #0f4fa8 !important;
+}
+
+.records-table tbody tr.records-cat-header:hover,
+.records-table tbody tr.records-cat-header:hover td {
+    background: #0f4fa8 !important;
+}
+
+.records-table .item-num {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
 .status-badge {
     display: inline-block;
     padding: 6px 14px;
@@ -1699,7 +1726,7 @@ tr:hover {
     .print-checklist thead tr:first-child th:nth-child(2) { width: 8%; }
     .print-checklist thead tr:first-child th:nth-child(3) { width: 24%; } /* Quantity per Physical Count colspan=3 */
     .print-checklist thead tr:first-child th:nth-child(4) { width: 26%; } /* Calibration colspan=3 */
-    .print-checklist thead tr:first-child th:nth-child(5) { width: 12%; } /* Remarks */
+    .print-checklist thead tr:first-child th:nth-child(5) { width: 20%; } /* Remarks */
 
     .print-checklist thead tr:nth-child(2) th:nth-child(1) { width: 8%; }
     .print-checklist thead tr:nth-child(2) th:nth-child(2) { width: 8%; }
@@ -1726,6 +1753,8 @@ tr:hover {
         vertical-align: middle;
         text-align: center;
         word-wrap: break-word;
+        min-height: 20px;
+        height: auto;
     }
 
     .print-checklist tbody td:first-child {
@@ -1733,13 +1762,15 @@ tr:hover {
         font-weight: 600;
     }
 
-    .print-checklist .category-header {
-        background: #eaeaea;
-        font-weight: 700;
-        text-align: left;
-        padding: 4px 5px;
-        border: 1px solid #000;
-        font-size: 8.5pt;
+    .print-checklist tbody td.category-header {
+        background: #d5d5d5 !important;
+        font-weight: 700 !important;
+        text-align: left !important;
+        padding: 4px 5px !important;
+        border: 1px solid #000 !important;
+        font-size: 8.5pt !important;
+        color: #000 !important;
+        min-height: 20px;
     }
 
     .print-checklist .subcategory-header {
