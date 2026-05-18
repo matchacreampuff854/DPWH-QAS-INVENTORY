@@ -30,11 +30,13 @@
                     📅
                     <span id="calendar-badge" class="calendar-badge">0</span>
                 </button>
-                <button id="graph-btn" class="icon-btn" aria-label="Analytics">📊</button>
                 <button id="add-material-btn" class="btn btn-primary">+ Add Material</button>
                 <button id="notification-btn" class="btn btn-tertiary notification-btn" aria-label="Notifications">
                     🔔
                     <span id="notification-badge" class="notification-badge">0</span>
+                </button>
+                <button id="theme-toggle" class="icon-btn theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    🌙
                 </button>
             </div>
         </header>
@@ -72,40 +74,65 @@
                         <span class="metric-title">Total Materials</span>
                         <strong id="total-materials">0</strong>
                     </div>
-                    <p>Active inventory items</p>
+                    <p>All inventory items</p>
                 </article>
                 <article class="metric-card">
                     <div>
-                        <span class="metric-title">Tests Passed</span>
-                        <strong id="tests-passed">0%</strong>
+                        <span class="metric-title">Functioning</span>
+                        <strong id="functioning-count">0</strong>
                     </div>
-                    <p>Quality assurance rate</p>
+                    <p>Equipment in good condition</p>
                 </article>
                 <article class="metric-card">
                     <div>
-                        <span class="metric-title">Inspections</span>
-                        <strong id="inspections-count">0</strong>
+                        <span class="metric-title">Not Functioning</span>
+                        <strong id="not-functioning-count">0</strong>
                     </div>
-                    <p>Completed this month</p>
+                    <p>Needs repair or replacement</p>
+                </article>
+                <article class="metric-card">
+                    <div>
+                        <span class="metric-title">Overdue Calibration</span>
+                        <strong id="overdue-calibration">0</strong>
+                    </div>
+                    <p>Past calibration schedule</p>
                 </article>
             </section>
 
             <section class="dashboard-grid">
                 <div class="card chart-card">
                     <div class="card-header">
-                        <h2>Material Usage Trend</h2>
+                        <h2>Equipment Status Breakdown</h2>
                     </div>
                     <div class="chart-wrapper">
-                        <canvas id="usage-chart"></canvas>
+                        <canvas id="status-chart"></canvas>
                     </div>
                 </div>
 
                 <div class="card chart-card">
                     <div class="card-header">
-                        <h2>Quality Test Results</h2>
+                        <h2>Calibration Overview</h2>
                     </div>
                     <div class="chart-wrapper">
-                        <canvas id="quality-chart"></canvas>
+                        <canvas id="calibration-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>Category Distribution</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="category-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h2>Upcoming Calibrations by Month</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="monthly-chart"></canvas>
                     </div>
                 </div>
             </section>

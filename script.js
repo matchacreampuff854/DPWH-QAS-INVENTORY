@@ -1,7 +1,9 @@
 // DPWH Quality Assurance Inventory Script
 
-let usageChart;
-let qualityChart;
+let statusChart;
+let calibrationChart;
+let categoryChart;
+let monthlyChart;
 let categories = ['Soil Aggregates & Asphalt Aggregates', 'Asphaltic Materials & Asphalt Mixes', 'Test on Concrete'];
 let units = ['pc', 'set', 'sack', 'unit', 'bot', 'bag', 'pair'];
 const API_BASE = (window.location.port === '5500' || window.location.protocol === 'file:') 
@@ -17,6 +19,7 @@ let autoRefreshInterval = null;
 const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
 
 document.addEventListener('DOMContentLoaded', async function() {
+    loadTheme();
     loadUnits();
     populateUnitSelect();
     initTabs();
@@ -31,6 +34,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             syncInventory();
         }
     });
+
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
     document.getElementById('calendar-btn').addEventListener('click', toggleCalendarPopup);
     document.getElementById('cal-prev').addEventListener('click', () => changeCalendarMonth(-1));
@@ -72,8 +77,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     document.getElementById('add-material-btn').addEventListener('click', scrollToAddMaterial);
-    document.getElementById('graph-btn').addEventListener('click', scrollToCharts);
-
     document.getElementById('add-category-btn').addEventListener('click', function(e) {
         e.preventDefault();
         openCategoryModal();
@@ -190,6 +193,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         saveEdit();
     });
 });
+
+function loadTheme() {
+    const saved = localStorage.getItem('dpwh-theme');
+    if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        updateThemeIcon(true);
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        updateThemeIcon(false);
+    }
+}
+
+function saveTheme(isDark) {
+    localStorage.setItem('dpwh-theme', isDark ? 'dark' : 'light');
+}
+
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        saveTheme(false);
+        updateThemeIcon(false);
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        saveTheme(true);
+        updateThemeIcon(true);
+    }
+}
+
+function updateThemeIcon(isDark) {
+    const btn = document.getElementById('theme-toggle');
+    if (btn) {
+        btn.textContent = isDark ? '☀️' : '🌙';
+        btn.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    }
+}
 
 function loadUnits() {
     const saved = localStorage.getItem('dpwh-units');
@@ -509,12 +548,22 @@ function updateDashboard() {
     const inventory = getInventory();
     const total = inventory.length;
     const functioningCount = inventory.filter(item => getQuantity(item) === 'functioning').length;
-    const testsPassed = total ? Math.round((functioningCount / total) * 100) : 0;
-    const inspections = total ? Math.max(16, Math.round(total * 1.5) + 12) : 0;
+    const notFunctioningCount = inventory.filter(item => getQuantity(item) === 'not-functioning').length;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const overdueCount = inventory.filter(item => {
+        const nextCal = getNextCalibration(item);
+        if (!nextCal) return false;
+        const calDate = new Date(nextCal);
+        calDate.setHours(0, 0, 0, 0);
+        return calDate < today;
+    }).length;
 
     document.getElementById('total-materials').textContent = total;
-    document.getElementById('tests-passed').textContent = `${testsPassed}%`;
-    document.getElementById('inspections-count').textContent = inspections;
+    document.getElementById('functioning-count').textContent = functioningCount;
+    document.getElementById('not-functioning-count').textContent = notFunctioningCount;
+    document.getElementById('overdue-calibration').textContent = overdueCount;
 }
 
 function updateRecentActivity() {
@@ -542,147 +591,183 @@ function updateRecentActivity() {
 
 function updateCharts() {
     const inventory = getInventory();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-    const usageData = [450, 380, 520, 490, 530];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (usageChart) {
-        usageChart.destroy();
-    }
+    // ── Chart 1: Equipment Status Breakdown (Doughnut) ──
+    const functioning = inventory.filter(item => getQuantity(item) === 'functioning').length;
+    const notFunctioning = inventory.filter(item => getQuantity(item) === 'not-functioning').length;
+    const noneCount = inventory.filter(item => getQuantity(item) === 'none').length;
 
-    const usageCtx = document.getElementById('usage-chart').getContext('2d');
-    usageChart = new Chart(usageCtx, {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: [
-                {
-                    label: 'Cement',
-                    data: usageData,
-                    borderColor: '#0f4fa8',
-                    backgroundColor: 'rgba(15, 79, 168, 0.12)',
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#0f4fa8'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                }
+    if (statusChart) statusChart.destroy();
+    const statusCtx = document.getElementById('status-chart');
+    if (statusCtx) {
+        statusChart = new Chart(statusCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Functioning', 'Not Functioning', 'None'],
+                datasets: [{
+                    data: [functioning, notFunctioning, noneCount],
+                    backgroundColor: ['#0f4fa8', '#ff6f1f', '#94a3b8'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#64748b'
-                    },
-                    grid: {
-                        color: 'rgba(15, 79, 168, 0.08)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: '#64748b'
-                    },
-                    grid: {
-                        display: false
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 8, usePointStyle: true, boxWidth: 8, font: { size: 11 } } }
                 }
             }
-        }
-    });
+        });
+    }
 
-    const categoriesData = {};
+    // ── Chart 2: Calibration Overview (Doughnut) ──
+    let validCal = 0, overdueCal = 0, noSchedule = 0;
     inventory.forEach(item => {
-        if (!categoriesData[item.category]) {
-            categoriesData[item.category] = { total: 0, functioning: 0 };
-        }
-        categoriesData[item.category].total += 1;
-        if (getQuantity(item) === 'functioning') {
-            categoriesData[item.category].functioning += 1;
+        const nextCal = getNextCalibration(item);
+        if (!nextCal) {
+            noSchedule++;
+        } else {
+            const calDate = new Date(nextCal);
+            calDate.setHours(0, 0, 0, 0);
+            if (calDate < today) overdueCal++;
+            else validCal++;
         }
     });
 
-    const qualityLabels = Object.keys(categoriesData).length ? Object.keys(categoriesData) : ['Chemicals', 'Asphalt', 'Wood'];
-    const qualityValues = qualityLabels.map(label => {
-        const data = categoriesData[label];
-        return data && data.total ? Math.round((data.functioning / data.total) * 100) : 0;
-    });
-
-    if (qualityChart) {
-        qualityChart.destroy();
+    if (calibrationChart) calibrationChart.destroy();
+    const calCtx = document.getElementById('calibration-chart');
+    if (calCtx) {
+        calibrationChart = new Chart(calCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Valid', 'Overdue', 'No Schedule'],
+                datasets: [{
+                    data: [validCal, overdueCal, noSchedule],
+                    backgroundColor: ['#0f4fa8', '#dc3545', '#94a3b8'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                }
+            }
+        });
     }
 
-    const qualityCtx = document.getElementById('quality-chart').getContext('2d');
-    qualityChart = new Chart(qualityCtx, {
-        type: 'bar',
-        data: {
-            labels: qualityLabels,
-            datasets: [
-                {
-                    label: 'Passed (%)',
-                    data: qualityValues,
-                    backgroundColor: '#ff6f1f'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                filler: {
-                    propagate: true
-                },
-                tooltip: {
-                    enabled: true
-                }
+    // ── Chart 3: Category Distribution (Bar) ──
+    const catCounts = {};
+    inventory.forEach(item => {
+        const cat = item.category || 'Uncategorized';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+    });
+    const catLabels = Object.keys(catCounts).sort();
+    const catValues = catLabels.map(c => catCounts[c]);
+
+    if (categoryChart) categoryChart.destroy();
+    const catCtx = document.getElementById('category-chart');
+    if (catCtx) {
+        categoryChart = new Chart(catCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    label: 'Items',
+                    data: catValues,
+                    backgroundColor: '#0f4fa8',
+                    borderRadius: 6
+                }]
             },
-            layout: {
-                padding: {
-                    bottom: 40,
-                    left: 10,
-                    right: 10,
-                    top: 10
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: {
-                        color: '#64748b',
-                        padding: 8
-                    },
-                    grid: {
-                        color: 'rgba(15, 79, 168, 0.08)'
-                    }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
                 },
-                x: {
-                    ticks: {
-                        color: '#64748b',
-                        maxRotation: 45,
-                        minRotation: 0,
-                        font: {
-                            size: 10
-                        },
-                        padding: 15
+                layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#64748b', stepSize: 1, font: { size: 10 } },
+                        grid: { color: 'rgba(15, 79, 168, 0.08)' }
                     },
-                    grid: {
-                        display: false
+                    x: {
+                        ticks: { color: '#64748b', maxRotation: 30, font: { size: 10 } },
+                        grid: { display: false }
                     }
                 }
             }
+        });
+    }
+
+    // ── Chart 4: Upcoming Calibrations by Month (Bar) ──
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthlyCounts = new Array(12).fill(0);
+    inventory.forEach(item => {
+        const nextCal = getNextCalibration(item);
+        if (nextCal) {
+            const d = new Date(nextCal);
+            const m = d.getMonth();
+            const y = d.getFullYear();
+            if (y === today.getFullYear()) {
+                monthlyCounts[m]++;
+            }
         }
     });
+
+    // Show current month + next 5 months
+    const currentMonth = today.getMonth();
+    const trendLabels = [];
+    const trendData = [];
+    for (let i = 0; i < 6; i++) {
+        const m = (currentMonth + i) % 12;
+        trendLabels.push(monthNames[m]);
+        trendData.push(monthlyCounts[m]);
+    }
+
+    if (monthlyChart) monthlyChart.destroy();
+    const monthCtx = document.getElementById('monthly-chart');
+    if (monthCtx) {
+        monthlyChart = new Chart(monthCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Calibrations Due',
+                    data: trendData,
+                    backgroundColor: '#ff6f1f',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#64748b', stepSize: 1, font: { size: 10 } },
+                        grid: { color: 'rgba(15, 79, 168, 0.08)' }
+                    },
+                    x: {
+                        ticks: { color: '#64748b', font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
 }
 
 function checkNotifications() {
