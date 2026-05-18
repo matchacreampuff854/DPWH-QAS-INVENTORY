@@ -527,6 +527,7 @@ function updateCharts() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: true,
@@ -591,9 +592,24 @@ function updateCharts() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
+                },
+                filler: {
+                    propagate: true
+                },
+                tooltip: {
+                    enabled: true
+                }
+            },
+            layout: {
+                padding: {
+                    bottom: 40,
+                    left: 10,
+                    right: 10,
+                    top: 10
                 }
             },
             scales: {
@@ -601,7 +617,8 @@ function updateCharts() {
                     beginAtZero: true,
                     max: 100,
                     ticks: {
-                        color: '#64748b'
+                        color: '#64748b',
+                        padding: 8
                     },
                     grid: {
                         color: 'rgba(15, 79, 168, 0.08)'
@@ -609,7 +626,13 @@ function updateCharts() {
                 },
                 x: {
                     ticks: {
-                        color: '#64748b'
+                        color: '#64748b',
+                        maxRotation: 45,
+                        minRotation: 0,
+                        font: {
+                            size: 10
+                        },
+                        padding: 15
                     },
                     grid: {
                         display: false
