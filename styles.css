@@ -1080,6 +1080,7 @@ a.brand-mark.logo-mark {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .records-topbar h2 {

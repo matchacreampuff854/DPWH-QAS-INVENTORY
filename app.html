@@ -233,7 +233,7 @@
                             <p id="records-count">0 items total</p>
                         </div>
                         <div class="records-actions">
-                            <button type="button" class="btn btn-secondary" onclick="printRecords()">🖨️ Print</button>
+                            <button type="button" class="btn btn-secondary" onclick="openPrintModal()">🖨️ Print</button>
                             <button type="button" class="btn btn-primary" onclick="switchTab('materials'); setTimeout(scrollToAddMaterial, 300);">
                                 + Add Item
                             </button>
@@ -374,6 +374,34 @@
                     <div class="modal-actions">
                         <button type="button" id="confirm-modal-cancel" class="btn btn-tertiary">Cancel</button>
                         <button type="button" id="confirm-modal-yes" class="btn btn-primary">Remove</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Settings Modal -->
+            <div id="print-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closePrintModal()"></div>
+                <div class="modal-content popup-modal">
+                    <button type="button" class="modal-close" onclick="closePrintModal()">&times;</button>
+                    <h3>Print Settings</h3>
+                    <p class="modal-subtitle">Choose your print options before proceeding.</p>
+                    <div class="form-group">
+                        <label for="print-orientation">Page Orientation</label>
+                        <select id="print-orientation">
+                            <option value="portrait" selected>Portrait (Default)</option>
+                            <option value="landscape">Landscape</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="print-color">Print Color</label>
+                        <select id="print-color">
+                            <option value="color" selected>Color (Default)</option>
+                            <option value="bw">Black &amp; White</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-tertiary" onclick="closePrintModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmPrint()">🖨️ Print</button>
                     </div>
                 </div>
             </div>

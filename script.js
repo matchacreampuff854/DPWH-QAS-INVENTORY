@@ -303,6 +303,25 @@ function closeConfirmModal() {
     pendingConfirmAction = null;
 }
 
+function openPrintModal() {
+    const modal = document.getElementById('print-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closePrintModal() {
+    const modal = document.getElementById('print-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function confirmPrint() {
+    closePrintModal();
+    printRecords();
+}
+
 function removeSelectedCategory() {
     const select = document.getElementById('item-category');
     if (!select) return;
@@ -1249,8 +1268,14 @@ function printRecords() {
         );
     }
 
+    // Read print settings
+    const orientationSelect = document.getElementById('print-orientation');
+    const colorSelect = document.getElementById('print-color');
+    const orientation = orientationSelect ? orientationSelect.value : 'portrait';
+    const colorMode = colorSelect ? colorSelect.value : 'color';
+
     // Build print HTML inside a hidden iframe for reliable rendering
-    const printHTML = buildPrintHTML(inventory);
+    const printHTML = buildPrintHTML(inventory, orientation, colorMode);
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.top = '0';
@@ -1278,7 +1303,10 @@ function printRecords() {
     }, 300);
 }
 
-function buildPrintHTML(inventory) {
+function buildPrintHTML(inventory, orientation, colorMode) {
+    const isPortrait = orientation === 'portrait';
+    const isBW = colorMode === 'bw';
+
     let rowsHTML = '';
 
     if (!inventory.length) {
@@ -1320,12 +1348,30 @@ function buildPrintHTML(inventory) {
         });
     }
 
-    return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Checklist Print</title>
-<style>
+    // Portrait: compact everything to fit 9 columns on A4 portrait
+    const portraitCSS = `
+@page { size: A4 portrait; margin: 6mm; }
+body { font-family: Georgia, serif; font-size: 8pt; margin: 0; padding: 0; background: #fff; }
+.form-header { margin-bottom: 6px; }
+.form-header h1 { text-align: center; font-size: 11pt; font-weight: 700; text-transform: uppercase; margin: 0 0 5px; letter-spacing: 0.3px; }
+.form-meta { font-size: 7.5pt; border-bottom: 1px solid #333; padding-bottom: 4px; margin-bottom: 5px; }
+.form-meta p { margin: 1px 0; }
+.print-checklist { width: 100%; border-collapse: collapse; font-size: 6.5pt; table-layout: fixed; }
+.print-checklist thead th { border: 1px solid #000; padding: 2px 2px; text-align: center; vertical-align: middle; font-weight: 700; background: ${isBW ? '#ddd' : '#f5f5f5'}; line-height: 1.1; }
+.print-checklist tbody td { border: 0.8px solid #000; padding: 2px 3px; vertical-align: middle; text-align: center; word-wrap: break-word; overflow-wrap: break-word; word-break: break-all; }
+.print-checklist tbody td:first-child { text-align: left; font-weight: 600; word-break: break-word; }
+.print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 2px 4px; border: 0.8px solid #000; font-size: 7pt; }
+.print-checklist thead tr:first-child th:nth-child(1) { width: 18%; }
+.print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
+.print-checklist thead tr:first-child th:nth-child(3) { width: 20%; }
+.print-checklist thead tr:first-child th:nth-child(4) { width: 23%; }
+.print-checklist thead tr:first-child th:nth-child(5) { width: 14%; }
+.print-checklist thead tr:nth-child(2) th { width: 6.6%; }
+.print-checklist td.date-cell { white-space: nowrap; font-size: 6pt; }
+`;
+
+    // Landscape: more spacious layout
+    const landscapeCSS = `
 @page { size: A4 landscape; margin: 10mm; }
 body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; background: #fff; }
 .form-header { margin-bottom: 10px; }
@@ -1333,10 +1379,10 @@ body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; back
 .form-meta { font-size: 9pt; border-bottom: 1.5px solid #333; padding-bottom: 6px; margin-bottom: 8px; }
 .form-meta p { margin: 2px 0; }
 .print-checklist { width: 100%; border-collapse: collapse; font-size: 9pt; table-layout: fixed; }
-.print-checklist thead th { border: 1.5px solid #000; padding: 5px 4px; text-align: center; vertical-align: middle; font-weight: 700; background: #f5f5f5; line-height: 1.2; }
+.print-checklist thead th { border: 1.5px solid #000; padding: 5px 4px; text-align: center; vertical-align: middle; font-weight: 700; background: ${isBW ? '#ddd' : '#f5f5f5'}; line-height: 1.2; }
 .print-checklist tbody td { border: 1px solid #000; padding: 4px 5px; vertical-align: middle; text-align: center; word-wrap: break-word; }
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
-.print-checklist .category-header { background: #0f4fa8 !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
+.print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
 .print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
 .print-checklist thead tr:first-child th:nth-child(3) { width: 21%; }
@@ -1344,6 +1390,17 @@ body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; back
 .print-checklist thead tr:first-child th:nth-child(5) { width: 16%; }
 .print-checklist thead tr:nth-child(2) th { width: 7%; }
 .print-checklist td.date-cell { white-space: nowrap; }
+`;
+
+    const css = isPortrait ? portraitCSS : landscapeCSS;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Checklist Print</title>
+<style>
+${css}
 </style>
 </head>
 <body>
