@@ -1239,6 +1239,7 @@ function populateYearDropdown() {
 
 function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
     const row = document.createElement('tr');
+    if (itemIdx !== '') row.classList.add('records-item-indented');
     const qty = getQuantity(item);
     const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
     const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
@@ -1254,7 +1255,6 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
 
     row.innerHTML = `
         <td><span class="item-num">${numLabel}</span> <strong>${item.name}</strong></td>
-        <td>${item.category}</td>
         <td>${item.unit || 'N/A'}</td>
         <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
         <td>${freq}</td>
@@ -1631,9 +1631,7 @@ async function saveEdit() {
 }
 
 function deleteFromRecords(id) {
-    if (confirm('Are you sure you want to delete this material?')) {
-        deleteMaterial(id);
-    }
+    deleteMaterial(id);
 }
 
 function printRecords() {

@@ -1325,6 +1325,10 @@ a.brand-mark.logo-mark {
     margin-right: 6px;
 }
 
+.records-item-indented td:first-child {
+    padding-left: 64px;
+}
+
 .status-badge {
     display: inline-block;
     padding: 6px 14px;
