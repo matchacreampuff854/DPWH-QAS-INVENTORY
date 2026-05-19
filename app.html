@@ -176,6 +176,10 @@
                                 <input type="text" id="item-subcategory" placeholder="e.g. Soil Analysis, Mix Design">
                             </div>
                             <div class="form-group">
+                                <label for="item-sub-subcategory">Sub-Subcategory</label>
+                                <input type="text" id="item-sub-subcategory" placeholder="e.g. Specific Gravity, Compaction Test">
+                            </div>
+                            <div class="form-group">
                                 <label for="item-unit">Unit of Measure</label>
                                 <div class="unit-input-group">
                                     <select id="item-unit" required>
@@ -462,6 +466,13 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label for="edit-item-sub-subcategory">Sub-Subcategory</label>
+                            <div class="edit-input-group">
+                                <input type="text" id="edit-item-sub-subcategory" placeholder="e.g. Specific Gravity, Compaction Test">
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-item-sub-subcategory').value=''" title="Clear sub-subcategory">×</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label for="edit-item-unit">Unit of Measure</label>
                             <select id="edit-item-unit" required></select>
                         </div>
@@ -512,6 +523,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=3"></script>
 </body>
 </html>

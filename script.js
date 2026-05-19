@@ -14,6 +14,8 @@ let completedTasks = [];
 let calCurrentDate = new Date();
 let calSelectedDate = null;
 let inventoryCache = [];
+let subcategoriesCache = [];
+let subsubcategoriesCache = [];
 let pendingConfirmAction = null;
 let autoRefreshInterval = null;
 const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
@@ -25,12 +27,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     initTabs();
     loadCompletedTasks();
     await checkBackendHealth();
+    await syncSubcategories();
+    await syncSubsubcategories();
     await syncInventory();
     startAutoRefresh();
 
     // Instant sync when user returns to this browser tab
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
+            syncSubcategories();
+            syncSubsubcategories();
             syncInventory();
         }
     });
@@ -526,10 +532,37 @@ function loadInventory() {
     });
 }
 
+async function registerSubcategory(name, category) {
+    if (!name || !category) return;
+    try {
+        await fetch(`${API_BASE}/subcategories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, category })
+        });
+    } catch (e) {
+        // Silently ignore duplicates or errors
+    }
+}
+
+async function registerSubsubcategory(name, subcategory, category) {
+    if (!name || !subcategory || !category) return;
+    try {
+        await fetch(`${API_BASE}/subsubcategories`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, subcategory, category })
+        });
+    } catch (e) {
+        // Silently ignore duplicates or errors
+    }
+}
+
 async function addMaterial() {
     const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
     const subcategory = document.getElementById('item-subcategory').value.trim();
+    const subSubcategory = document.getElementById('item-sub-subcategory').value.trim();
     const unit = document.getElementById('item-unit').value;
     const quantityPerPhysicalCount = document.getElementById('item-quantity').value;
     const frequencyAsPerDO = document.getElementById('frequency-do').value.trim();
@@ -555,14 +588,18 @@ async function addMaterial() {
         const res = await fetch(`${API_BASE}/inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            body: JSON.stringify({ id, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
             alert(err.error || 'Failed to add material. Check that the backend is running (cd Backend && npm start).');
             return;
         }
+        if (subcategory) await registerSubcategory(subcategory, category);
+        if (subSubcategory) await registerSubsubcategory(subSubcategory, subcategory, category);
         document.getElementById('add-form').reset();
+        await syncSubcategories();
+        await syncSubsubcategories();
         await syncInventory();
     } catch (error) {
         alert('Failed to add material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
@@ -905,6 +942,28 @@ function removeBackendWarning() {
     if (banner) banner.remove();
 }
 
+async function syncSubcategories() {
+    try {
+        const res = await fetch(`${API_BASE}/subcategories`);
+        if (!res.ok) throw new Error('Failed to fetch subcategories');
+        subcategoriesCache = await res.json();
+    } catch (error) {
+        console.error('Failed to sync subcategories', error);
+        subcategoriesCache = [];
+    }
+}
+
+async function syncSubsubcategories() {
+    try {
+        const res = await fetch(`${API_BASE}/subsubcategories`);
+        if (!res.ok) throw new Error('Failed to fetch sub-subcategories');
+        subsubcategoriesCache = await res.json();
+    } catch (error) {
+        console.error('Failed to sync sub-subcategories', error);
+        subsubcategoriesCache = [];
+    }
+}
+
 async function syncInventory() {
     try {
         const res = await fetch(`${API_BASE}/inventory`);
@@ -1083,6 +1142,8 @@ function startAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
     autoRefreshInterval = setInterval(async () => {
         const prevHash = inventoryHash(inventoryCache);
+        await syncSubcategories();
+        await syncSubsubcategories();
         await syncInventory();
         const newHash = inventoryHash(inventoryCache);
         if (prevHash !== newHash) {
@@ -1176,6 +1237,124 @@ function populateYearDropdown() {
     }
 }
 
+function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
+    const row = document.createElement('tr');
+    const qty = getQuantity(item);
+    const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
+    const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+    const freq = getFrequency(item);
+    const lastCal = getDateLastCalibrated(item);
+    const nextCal = getNextCalibration(item) || 'N/A';
+    const inputDate = item.createdAt
+        ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Unknown date';
+    row.title = `Inputted on: ${inputDate}`;
+
+    row.innerHTML = `
+        <td><span class="item-num">${subSubNum}.${itemIdx}</span> <strong>${item.name}</strong></td>
+        <td>${item.category}</td>
+        <td>${item.unit || 'N/A'}</td>
+        <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+        <td>${freq}</td>
+        <td>${lastCal}</td>
+        <td>${nextCal}</td>
+        <td>${item.remarks || ''}</td>
+        <td>
+            <div class="action-btns">
+                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+            </div>
+        </td>
+    `;
+    tbody.appendChild(row);
+}
+
+async function renameSubcategoryPrompt(oldName, category) {
+    const newName = prompt(`Rename subcategory "${oldName}" to:`, oldName);
+    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+    try {
+        const res = await fetch(`${API_BASE}/subcategories`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldName, newName: newName.trim(), category })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to rename subcategory');
+            return;
+        }
+        await syncSubcategories();
+        await syncInventory();
+        renderRecords();
+    } catch (error) {
+        alert('Failed to rename subcategory. Backend is not running.');
+    }
+}
+
+async function deleteSubcategoryPrompt(name, category) {
+    if (!confirm(`Delete subcategory "${name}"?\n\nAll items under this subcategory will lose their subcategory label but will NOT be deleted.`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/subcategories`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, category })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to delete subcategory');
+            return;
+        }
+        await syncSubcategories();
+        await syncInventory();
+        renderRecords();
+    } catch (error) {
+        alert('Failed to delete subcategory. Backend is not running.');
+    }
+}
+
+async function renameSubsubcategoryPrompt(oldName, subcategory, category) {
+    const newName = prompt(`Rename sub-subcategory "${oldName}" to:`, oldName);
+    if (!newName || newName.trim() === '' || newName.trim() === oldName) return;
+    try {
+        const res = await fetch(`${API_BASE}/subsubcategories`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ oldName, newName: newName.trim(), subcategory, category })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to rename sub-subcategory');
+            return;
+        }
+        await syncSubsubcategories();
+        await syncInventory();
+        renderRecords();
+    } catch (error) {
+        alert('Failed to rename sub-subcategory. Backend is not running.');
+    }
+}
+
+async function deleteSubsubcategoryPrompt(name, subcategory, category) {
+    if (!confirm(`Delete sub-subcategory "${name}"?\n\nAll items under this sub-subcategory will lose their sub-subcategory label but will NOT be deleted.`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/subsubcategories`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, subcategory, category })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to delete sub-subcategory');
+            return;
+        }
+        await syncSubsubcategories();
+        await syncInventory();
+        renderRecords();
+    } catch (error) {
+        alert('Failed to delete sub-subcategory. Backend is not running.');
+    }
+}
+
 function renderRecords() {
     const tbody = document.getElementById('records-body');
     const yearSelect = document.getElementById('records-year');
@@ -1228,12 +1407,7 @@ function renderRecords() {
 
     tbody.innerHTML = '';
 
-    if (!inventory.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="no-records">No records found.</td></tr>';
-        return;
-    }
-
-    // Group by category
+    // Group items by category
     const grouped = {};
     inventory.forEach(item => {
         const cat = item.category || 'Uncategorized';
@@ -1241,114 +1415,130 @@ function renderRecords() {
         grouped[cat].push(item);
     });
 
-    let catNum = 1;
-    Object.keys(grouped).sort().forEach(cat => {
-        // Category header row
+    // Determine which categories to show (have items OR registered subcategories OR registered sub-subcategories)
+    const categoriesFromItems = Object.keys(grouped);
+    const categoriesFromSubs = [...new Set(subcategoriesCache.map(s => s.category))];
+    const categoriesFromSubSubs = [...new Set(subsubcategoriesCache.map(s => s.category))];
+    const allCategories = [...new Set([...categoriesFromItems, ...categoriesFromSubs, ...categoriesFromSubSubs])].sort();
+
+    if (!allCategories.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="no-records">No records found.</td></tr>';
+        return;
+    }
+
+    allCategories.forEach(cat => {
+        const catItems = grouped[cat] || [];
+        const catSubs = subcategoriesCache
+            .filter(s => s.category === cat)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        // Category header row — NO number, just bold uppercase
         const catRow = document.createElement('tr');
         catRow.className = 'records-cat-header';
-        catRow.innerHTML = `<td colspan="9" class="records-cat-cell">${catNum}. ${cat.toUpperCase()}</td>`;
+        catRow.innerHTML = `<td colspan="9" class="records-cat-cell">${cat.toUpperCase()}</td>`;
         tbody.appendChild(catRow);
 
-        const catItems = grouped[cat];
-        const hasSubcategories = catItems.some(item => item.subcategory);
-
-        if (hasSubcategories) {
-            // Group items by subcategory
-            const bySub = {};
-            catItems.forEach(item => {
-                const sub = item.subcategory || '';
-                if (!bySub[sub]) bySub[sub] = [];
-                bySub[sub].push(item);
-            });
-
-            // Sort: subcategories with names first, empty (no subcategory) last
-            const subKeys = Object.keys(bySub).sort((a, b) => {
-                if (a === '' && b !== '') return 1;
-                if (b === '' && a !== '') return -1;
-                return a.localeCompare(b);
-            });
-
+        if (catSubs.length > 0) {
             let subLetterCode = 65; // 'A'
-            let itemIdx = 1;
 
-            subKeys.forEach(sub => {
-                if (sub) {
-                    // Subcategory letter header row
-                    const subRow = document.createElement('tr');
-                    subRow.className = 'records-sub-header';
-                    subRow.innerHTML = `<td colspan="9" class="records-sub-cell">${String.fromCharCode(subLetterCode)}. ${sub}</td>`;
-                    tbody.appendChild(subRow);
-                    subLetterCode++;
-                }
+            catSubs.forEach(sub => {
+                const subItems = catItems.filter(item => item.subcategory === sub.name);
+                const escName = String(sub.name).replace(/'/g, '\\\'');
+                const escCat = String(sub.category).replace(/'/g, '\\\'');
 
-                bySub[sub].forEach(item => {
-                    const row = document.createElement('tr');
-                    const qty = getQuantity(item);
-                    const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
-                    const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
-                    const freq = getFrequency(item);
-                    const lastCal = getDateLastCalibrated(item);
-                    const nextCal = getNextCalibration(item) || 'N/A';
-                    const inputDate = item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        : 'Unknown date';
-                    row.title = `Inputted on: ${inputDate}`;
-
-                    row.innerHTML = `
-                        <td><span class="item-num">${catNum}.${itemIdx}</span> <strong>${item.name}</strong></td>
-                        <td>${item.category}</td>
-                        <td>${item.unit || 'N/A'}</td>
-                        <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
-                        <td>${freq}</td>
-                        <td>${lastCal}</td>
-                        <td>${nextCal}</td>
-                        <td>${item.remarks || ''}</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
-                            </div>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                    itemIdx++;
-                });
-            });
-        } else {
-            // No subcategories — render as before
-            catItems.forEach((item, idx) => {
-                const row = document.createElement('tr');
-                const qty = getQuantity(item);
-                const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
-                const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
-                const freq = getFrequency(item);
-                const lastCal = getDateLastCalibrated(item);
-                const nextCal = getNextCalibration(item) || 'N/A';
-                const inputDate = item.createdAt
-                    ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                    : 'Unknown date';
-                row.title = `Inputted on: ${inputDate}`;
-
-                row.innerHTML = `
-                    <td><span class="item-num">${catNum}.${idx + 1}</span> <strong>${item.name}</strong></td>
-                    <td>${item.category}</td>
-                    <td>${item.unit || 'N/A'}</td>
-                    <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
-                    <td>${freq}</td>
-                    <td>${lastCal}</td>
-                    <td>${nextCal}</td>
-                    <td>${item.remarks || ''}</td>
-                    <td>
-                        <div class="action-btns">
-                            <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                            <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+                // Subcategory header row (A, B, C...) with edit/delete buttons
+                const subRow = document.createElement('tr');
+                subRow.className = 'records-sub-header';
+                subRow.innerHTML = `
+                    <td colspan="9" class="records-sub-cell">
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <span>${String.fromCharCode(subLetterCode)}. ${sub.name}</span>
+                            <span class="sub-actions" style="display:flex;gap:6px;">
+                                <button class="action-btn edit" title="Rename subcategory" onclick="renameSubcategoryPrompt('${escName}', '${escCat}')">✏️</button>
+                                <button class="action-btn delete" title="Delete subcategory" onclick="deleteSubcategoryPrompt('${escName}', '${escCat}')">🗑️</button>
+                            </span>
                         </div>
                     </td>
                 `;
-                tbody.appendChild(row);
+                tbody.appendChild(subRow);
+                subLetterCode++;
+
+                // Sub-subcategories under this subcategory
+                const subSubcats = subsubcategoriesCache
+                    .filter(ss => ss.subcategory === sub.name && ss.category === cat)
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
+                if (subSubcats.length > 0) {
+                    let subSubNum = 1;
+
+                    subSubcats.forEach(ss => {
+                        const ssItems = subItems.filter(item => item.subSubcategory === ss.name);
+                        const escSsName = String(ss.name).replace(/'/g, '\\\'');
+                        const escSsSub = String(ss.subcategory).replace(/'/g, '\\\'');
+                        const escSsCat = String(ss.category).replace(/'/g, '\\\'');
+
+                        // Sub-subcategory header row (1, 2, 3...)
+                        const ssRow = document.createElement('tr');
+                        ssRow.className = 'records-subsub-header';
+                        ssRow.innerHTML = `
+                            <td colspan="9" class="records-subsub-cell">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <span>${subSubNum}. ${ss.name}</span>
+                                    <span class="sub-actions" style="display:flex;gap:6px;">
+                                        <button class="action-btn edit" title="Rename sub-subcategory" onclick="renameSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">✏️</button>
+                                        <button class="action-btn delete" title="Delete sub-subcategory" onclick="deleteSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">🗑️</button>
+                                    </span>
+                                </div>
+                            </td>
+                        `;
+                        tbody.appendChild(ssRow);
+
+                        // Items under this sub-subcategory (1.1, 1.2, 1.3...)
+                        let itemIdx = 1;
+                        ssItems.forEach(item => {
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
+                            itemIdx++;
+                        });
+
+                        subSubNum++;
+                    });
+
+                    // Items with no sub-subcategory under this subcategory
+                    const noSsItems = subItems.filter(item => !item.subSubcategory);
+                    if (noSsItems.length > 0) {
+                        let itemIdx = 1;
+                        noSsItems.forEach(item => {
+                            renderRecordItemRow(tbody, item, '-', itemIdx);
+                            itemIdx++;
+                        });
+                    }
+                } else {
+                    // No registered sub-subcategories — list items directly under subcategory
+                    let itemIdx = 1;
+                    subItems.forEach(item => {
+                        renderRecordItemRow(tbody, item, '-', itemIdx);
+                        itemIdx++;
+                    });
+                }
+            });
+
+            // Items with no subcategory at all
+            const noSubItems = catItems.filter(item => !item.subcategory);
+            if (noSubItems.length > 0) {
+                let itemIdx = 1;
+                noSubItems.forEach(item => {
+                    renderRecordItemRow(tbody, item, '-', itemIdx);
+                    itemIdx++;
+                });
+            }
+        } else {
+            // No registered subcategories — just list items
+            let itemIdx = 1;
+            catItems.forEach(item => {
+                renderRecordItemRow(tbody, item, '-', itemIdx);
+                itemIdx++;
             });
         }
-        catNum++;
     });
 }
 
@@ -1360,6 +1550,7 @@ function openEditModal(id) {
     document.getElementById('edit-original-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
     document.getElementById('edit-item-subcategory').value = item.subcategory || '';
+    document.getElementById('edit-item-sub-subcategory').value = item.subSubcategory || '';
     document.getElementById('edit-item-quantity').value = getQuantity(item);
     document.getElementById('edit-frequency-do').value = item.frequencyAsPerDO || '';
     document.getElementById('edit-date-last-calibrated').value = item.dateLastCalibrated || '';
@@ -1398,6 +1589,7 @@ async function saveEdit() {
     const name = document.getElementById('edit-item-name').value.trim();
     const category = document.getElementById('edit-item-category').value;
     const subcategory = document.getElementById('edit-item-subcategory').value.trim();
+    const subSubcategory = document.getElementById('edit-item-sub-subcategory').value.trim();
     const unit = document.getElementById('edit-item-unit').value;
     const quantityPerPhysicalCount = document.getElementById('edit-item-quantity').value;
     const frequencyAsPerDO = document.getElementById('edit-frequency-do').value.trim();
@@ -1414,14 +1606,18 @@ async function saveEdit() {
         const res = await fetch(`${API_BASE}/inventory/${originalId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: originalId, name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            body: JSON.stringify({ id: originalId, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
             alert(err.error || 'Failed to update material. Check that the backend is running.');
             return;
         }
+        if (subcategory) await registerSubcategory(subcategory, category);
+        if (subSubcategory) await registerSubsubcategory(subSubcategory, subcategory, category);
         closeEditModal();
+        await syncSubcategories();
+        await syncSubsubcategories();
         await syncInventory();
     } catch (error) {
         alert('Failed to update material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
@@ -1526,37 +1722,121 @@ function buildPrintHTML(inventory, orientation, colorMode) {
             grouped[cat].push(item);
         });
 
-        let catNum = 1;
         Object.keys(grouped).sort().forEach(cat => {
-            rowsHTML += `<tr><td colspan="9" class="category-header">${catNum}. ${cat.toUpperCase()}</td></tr>`;
+            rowsHTML += `<tr><td colspan="9" class="category-header">${cat.toUpperCase()}</td></tr>`;
 
             const catItems = grouped[cat];
-            const hasSubcategories = catItems.some(item => item.subcategory);
+            const catSubs = subcategoriesCache
+                .filter(s => s.category === cat)
+                .sort((a, b) => a.name.localeCompare(b.name));
 
-            if (hasSubcategories) {
-                const bySub = {};
-                catItems.forEach(item => {
-                    const sub = item.subcategory || '';
-                    if (!bySub[sub]) bySub[sub] = [];
-                    bySub[sub].push(item);
-                });
-
-                const subKeys = Object.keys(bySub).sort((a, b) => {
-                    if (a === '' && b !== '') return 1;
-                    if (b === '' && a !== '') return -1;
-                    return a.localeCompare(b);
-                });
-
+            if (catSubs.length > 0) {
                 let subLetterCode = 65; // 'A'
-                let itemIdx = 1;
 
-                subKeys.forEach(sub => {
-                    if (sub) {
-                        rowsHTML += `<tr><td colspan="9" class="subcategory-header">${String.fromCharCode(subLetterCode)}. ${escapeHtml(sub)}</td></tr>`;
-                        subLetterCode++;
+                catSubs.forEach(sub => {
+                    const subItems = catItems.filter(item => item.subcategory === sub.name);
+                    rowsHTML += `<tr><td colspan="9" class="subcategory-header">${String.fromCharCode(subLetterCode)}. ${escapeHtml(sub.name)}</td></tr>`;
+                    subLetterCode++;
+
+                    const subSubcats = subsubcategoriesCache
+                        .filter(ss => ss.subcategory === sub.name && ss.category === cat)
+                        .sort((a, b) => a.name.localeCompare(b.name));
+
+                    if (subSubcats.length > 0) {
+                        let subSubNum = 1;
+                        subSubcats.forEach(ss => {
+                            const ssItems = subItems.filter(item => item.subSubcategory === ss.name);
+                            rowsHTML += `<tr><td colspan="9" class="subsubcategory-header">${subSubNum}. ${escapeHtml(ss.name)}</td></tr>`;
+                            subSubNum++;
+
+                            let itemIdx = 1;
+                            ssItems.forEach(item => {
+                                const qty = getQuantity(item);
+                                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                                const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                                const freq = item.frequencyAsPerDO || '';
+                                const lastCal = item.dateLastCalibrated || '';
+                                const nextCal = getNextCalibration(item) || '';
+
+                                rowsHTML += `
+                                    <tr>
+                                        <td>${itemIdx}. ${escapeHtml(item.name)}</td>
+                                        <td>${escapeHtml(item.unit || '')}</td>
+                                        <td>${escapeHtml(functioning)}</td>
+                                        <td>${escapeHtml(notFunctioning)}</td>
+                                        <td>${escapeHtml(noneVal)}</td>
+                                        <td>${escapeHtml(freq)}</td>
+                                        <td class="date-cell">${escapeHtml(lastCal)}</td>
+                                        <td class="date-cell">${escapeHtml(nextCal)}</td>
+                                        <td>${escapeHtml(item.remarks || '')}</td>
+                                    </tr>
+                                `;
+                                itemIdx++;
+                            });
+                        });
+
+                        const noSsItems = subItems.filter(item => !item.subSubcategory);
+                        if (noSsItems.length > 0) {
+                            let itemIdx = 1;
+                            noSsItems.forEach(item => {
+                                const qty = getQuantity(item);
+                                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                                const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                                const freq = item.frequencyAsPerDO || '';
+                                const lastCal = item.dateLastCalibrated || '';
+                                const nextCal = getNextCalibration(item) || '';
+
+                                rowsHTML += `
+                                    <tr>
+                                        <td>${itemIdx}. ${escapeHtml(item.name)}</td>
+                                        <td>${escapeHtml(item.unit || '')}</td>
+                                        <td>${escapeHtml(functioning)}</td>
+                                        <td>${escapeHtml(notFunctioning)}</td>
+                                        <td>${escapeHtml(noneVal)}</td>
+                                        <td>${escapeHtml(freq)}</td>
+                                        <td class="date-cell">${escapeHtml(lastCal)}</td>
+                                        <td class="date-cell">${escapeHtml(nextCal)}</td>
+                                        <td>${escapeHtml(item.remarks || '')}</td>
+                                    </tr>
+                                `;
+                                itemIdx++;
+                            });
+                        }
+                    } else {
+                        let itemIdx = 1;
+                        subItems.forEach(item => {
+                            const qty = getQuantity(item);
+                            const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                            const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                            const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                            const freq = item.frequencyAsPerDO || '';
+                            const lastCal = item.dateLastCalibrated || '';
+                            const nextCal = getNextCalibration(item) || '';
+
+                            rowsHTML += `
+                                <tr>
+                                    <td>${itemIdx}. ${escapeHtml(item.name)}</td>
+                                    <td>${escapeHtml(item.unit || '')}</td>
+                                    <td>${escapeHtml(functioning)}</td>
+                                    <td>${escapeHtml(notFunctioning)}</td>
+                                    <td>${escapeHtml(noneVal)}</td>
+                                    <td>${escapeHtml(freq)}</td>
+                                    <td class="date-cell">${escapeHtml(lastCal)}</td>
+                                    <td class="date-cell">${escapeHtml(nextCal)}</td>
+                                    <td>${escapeHtml(item.remarks || '')}</td>
+                                </tr>
+                            `;
+                            itemIdx++;
+                        });
                     }
+                });
 
-                    bySub[sub].forEach(item => {
+                const noSubItems = catItems.filter(item => !item.subcategory);
+                if (noSubItems.length > 0) {
+                    let itemIdx = 1;
+                    noSubItems.forEach(item => {
                         const qty = getQuantity(item);
                         const functioning = qty === 'functioning' ? (item.unit || '1') : '';
                         const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
@@ -1580,7 +1860,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                         `;
                         itemIdx++;
                     });
-                });
+                }
             } else {
                 catItems.forEach((item, idx) => {
                     const qty = getQuantity(item);
@@ -1606,7 +1886,6 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                     `;
                 });
             }
-            catNum++;
         });
     }
 
@@ -1624,6 +1903,7 @@ body { font-family: Georgia, serif; font-size: 8pt; margin: 0; padding: 0; backg
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; word-break: break-word; }
 .print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 2px 4px; border: 0.8px solid #000; font-size: 7pt; }
 .print-checklist .subcategory-header { background: ${isBW ? '#bbb' : '#dbeafe'} !important; color: ${isBW ? '#000' : '#1e3a5f'} !important; font-weight: 600; text-align: left; padding: 2px 4px 2px 12px; border: 0.8px solid #000; font-size: 6.5pt; text-transform: uppercase; }
+.print-checklist .subsubcategory-header { background: ${isBW ? '#ddd' : '#f1f5f9'} !important; color: ${isBW ? '#000' : '#334155'} !important; font-weight: 600; text-align: left; padding: 2px 4px 2px 20px; border: 0.8px solid #000; font-size: 6.5pt; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 18%; }
 .print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
 .print-checklist thead tr:first-child th:nth-child(3) { width: 20%; }
@@ -1647,6 +1927,7 @@ body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; back
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
 .print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
 .print-checklist .subcategory-header { background: ${isBW ? '#bbb' : '#dbeafe'} !important; color: ${isBW ? '#000' : '#1e3a5f'} !important; font-weight: 600; text-align: left; padding: 4px 6px 4px 14px; border: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; }
+.print-checklist .subsubcategory-header { background: ${isBW ? '#ddd' : '#f1f5f9'} !important; color: ${isBW ? '#000' : '#334155'} !important; font-weight: 600; text-align: left; padding: 3px 6px 3px 24px; border: 1px solid #000; font-size: 8.5pt; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
 .print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
 .print-checklist thead tr:first-child th:nth-child(3) { width: 21%; }

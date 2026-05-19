@@ -1289,6 +1289,19 @@ a.brand-mark.logo-mark {
     background: #dbeafe !important;
 }
 
+.records-subsub-header {
+    background: #f1f5f9 !important;
+}
+
+.records-subsub-header .records-subsub-cell {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #334155;
+    padding: 6px 16px 6px 48px;
+    border-bottom: none;
+    background: #f1f5f9 !important;
+}
+
 .records-table tbody tr.records-cat-header:hover,
 .records-table tbody tr.records-cat-header:hover td {
     background: #0f4fa8 !important;
@@ -1297,6 +1310,11 @@ a.brand-mark.logo-mark {
 .records-table tbody tr.records-sub-header:hover,
 .records-table tbody tr.records-sub-header:hover td {
     background: #dbeafe !important;
+}
+
+.records-table tbody tr.records-subsub-header:hover,
+.records-table tbody tr.records-subsub-header:hover td {
+    background: #f1f5f9 !important;
 }
 
 .records-table .item-num {
@@ -1373,6 +1391,13 @@ a.brand-mark.logo-mark {
 
 .action-btn.delete:hover {
     background: #fdeaea;
+}
+
+.sub-actions .action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 0.85rem;
 }
 
 /* Modal */
@@ -1939,6 +1964,20 @@ tr:hover {
     background: #1a2744 !important;
 }
 
+[data-theme="dark"] .records-subsub-header {
+    background: #151c29 !important;
+}
+
+[data-theme="dark"] .records-subsub-cell {
+    color: #b8c5d6 !important;
+    background: #151c29 !important;
+}
+
+[data-theme="dark"] .records-table tbody tr.records-subsub-header:hover,
+[data-theme="dark"] .records-table tbody tr.records-subsub-header:hover td {
+    background: #151c29 !important;
+}
+
 [data-theme="dark"] .item-num {
     color: #7a8fa8;
 }
@@ -2059,6 +2098,11 @@ tr:hover {
 [data-theme="dark"] .action-btn.delete:hover {
     background: rgba(220, 53, 69, 0.15);
     border-color: rgba(220, 53, 69, 0.3);
+}
+
+[data-theme="dark"] .sub-actions .action-btn {
+    background: #1a2744;
+    border-color: #2a3449;
 }
 
 [data-theme="dark"] .theme-toggle {
