@@ -953,6 +953,52 @@ a.brand-mark.logo-mark {
     grid-column: 1 / -1;
 }
 
+.quantity-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.quantity-inputs > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.quantity-inputs label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.quantity-inputs input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #ffffff;
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quantity-inputs input:focus {
+    outline: none;
+    border-color: #0f4fa8;
+    box-shadow: 0 0 0 3px rgba(15, 79, 168, 0.1);
+}
+
+[data-theme="dark"] .quantity-inputs input {
+    background: #1a2332;
+    border-color: #2a3449;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .quantity-inputs input:focus {
+    border-color: #4a8fd8;
+    box-shadow: 0 0 0 3px rgba(74, 143, 216, 0.15);
+}
+
 .form-grid label {
     font-size: 0.95rem;
     font-weight: 600;
@@ -1216,7 +1262,7 @@ a.brand-mark.logo-mark {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    min-width: 900px;
+    min-width: 1100px;
     font-size: 0.92rem;
     border-radius: 0;
     overflow: visible;
@@ -1327,34 +1373,6 @@ a.brand-mark.logo-mark {
 
 .records-item-indented td:first-child {
     padding-left: 64px;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: capitalize;
-    letter-spacing: 0.3px;
-}
-
-.status-badge.functioning {
-    background: #e6f7ed;
-    color: #1a7f3e;
-    border: 1px solid #b8e6c8;
-}
-
-.status-badge.not-functioning {
-    background: #fdeaea;
-    color: #c5303f;
-    border: 1px solid #f5c2c7;
-}
-
-.status-badge.calibration {
-    background: #e8f1fd;
-    color: #0f4fa8;
-    border: 1px solid #b8d4f5;
 }
 
 .action-btns {
@@ -2068,20 +2086,6 @@ tr:hover {
     background: #151c29;
     border-color: #2a3449;
     color: #c9d6e6;
-}
-
-[data-theme="dark"] .status-badge {
-    border-color: transparent;
-}
-
-[data-theme="dark"] .status-badge.functioning {
-    background: rgba(74, 126, 196, 0.15);
-    color: #6ba3e0;
-}
-
-[data-theme="dark"] .status-badge.not-functioning {
-    background: rgba(201, 122, 58, 0.15);
-    color: #e0a06b;
 }
 
 [data-theme="dark"] .action-btn.edit {

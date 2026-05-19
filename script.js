@@ -204,11 +204,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         recordsCategory.addEventListener('change', renderRecords);
     }
 
-    const recordsStatus = document.getElementById('records-status-filter');
-    if (recordsStatus) {
-        recordsStatus.addEventListener('change', renderRecords);
-    }
-
     document.getElementById('edit-form').addEventListener('submit', function(e) {
         e.preventDefault();
         saveEdit();
@@ -464,6 +459,21 @@ function removeSelectedUnit() {
     );
 }
 
+function getQuantityObj(item) {
+    if (item.quantityPerPhysicalCount && typeof item.quantityPerPhysicalCount === 'object') {
+        return {
+            functioning: Number(item.quantityPerPhysicalCount.functioning) || 0,
+            notFunctioning: Number(item.quantityPerPhysicalCount.notFunctioning) || 0,
+            none: Number(item.quantityPerPhysicalCount.none) || 0
+        };
+    }
+    const val = (item.quantityPerPhysicalCount || item.status || 'none').toString().toLowerCase();
+    if (val === 'functioning') return { functioning: 1, notFunctioning: 0, none: 0 };
+    if (val === 'not-functioning' || val === 'not functioning') return { functioning: 0, notFunctioning: 1, none: 0 };
+    if (val === 'none') return { functioning: 0, notFunctioning: 0, none: 1 };
+    return { functioning: 0, notFunctioning: 0, none: 0 };
+}
+
 function getQuantity(item) {
     return item.quantityPerPhysicalCount || item.status || 'none';
 }
@@ -513,7 +523,7 @@ function loadInventory() {
 
     inventory.forEach(item => {
         const row = document.createElement('tr');
-        const qty = getQuantity(item);
+        const qtyObj = getQuantityObj(item);
         const freq = getFrequency(item);
         const lastCal = getDateLastCalibrated(item);
         const nextCal = getNextCalibration(item) || 'N/A';
@@ -521,7 +531,9 @@ function loadInventory() {
             <td>${item.name}</td>
             <td>${item.category}${item.subcategory ? ' — ' + item.subcategory : ''}</td>
             <td>${item.unit || 'N/A'}</td>
-            <td>${qty}</td>
+            <td>${qtyObj.functioning}</td>
+            <td>${qtyObj.notFunctioning}</td>
+            <td>${qtyObj.none}</td>
             <td>${freq}</td>
             <td>${lastCal}</td>
             <td>${nextCal}</td>
@@ -564,7 +576,11 @@ async function addMaterial() {
     const subcategory = document.getElementById('item-subcategory').value.trim();
     const subSubcategory = document.getElementById('item-sub-subcategory').value.trim();
     const unit = document.getElementById('item-unit').value;
-    const quantityPerPhysicalCount = document.getElementById('item-quantity').value;
+    const quantityPerPhysicalCount = {
+        functioning: parseInt(document.getElementById('item-qty-functioning').value) || 0,
+        notFunctioning: parseInt(document.getElementById('item-qty-not-functioning').value) || 0,
+        none: parseInt(document.getElementById('item-qty-none').value) || 0
+    };
     const frequencyAsPerDO = document.getElementById('frequency-do').value.trim();
     const dateLastCalibrated = document.getElementById('date-last-calibrated').value;
     const scheduleDateOfNextCalibration = document.getElementById('schedule-next-calibration').value;
@@ -627,8 +643,8 @@ async function deleteMaterial(id) {
 function updateDashboard() {
     const inventory = getInventory();
     const total = inventory.length;
-    const functioningCount = inventory.filter(item => getQuantity(item) === 'functioning').length;
-    const notFunctioningCount = inventory.filter(item => getQuantity(item) === 'not-functioning').length;
+    const functioningCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).functioning, 0);
+    const notFunctioningCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).notFunctioning, 0);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -675,9 +691,9 @@ function updateCharts() {
     today.setHours(0, 0, 0, 0);
 
     // ── Chart 1: Equipment Status Breakdown (Doughnut) ──
-    const functioning = inventory.filter(item => getQuantity(item) === 'functioning').length;
-    const notFunctioning = inventory.filter(item => getQuantity(item) === 'not-functioning').length;
-    const noneCount = inventory.filter(item => getQuantity(item) === 'none').length;
+    const functioning = inventory.reduce((sum, item) => sum + getQuantityObj(item).functioning, 0);
+    const notFunctioning = inventory.reduce((sum, item) => sum + getQuantityObj(item).notFunctioning, 0);
+    const noneCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).none, 0);
 
     if (statusChart) statusChart.destroy();
     const statusCtx = document.getElementById('status-chart');
@@ -1240,9 +1256,7 @@ function populateYearDropdown() {
 function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
     const row = document.createElement('tr');
     if (itemIdx !== '') row.classList.add('records-item-indented');
-    const qty = getQuantity(item);
-    const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
-    const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+    const qtyObj = getQuantityObj(item);
     const freq = getFrequency(item);
     const lastCal = getDateLastCalibrated(item);
     const nextCal = getNextCalibration(item) || 'N/A';
@@ -1256,7 +1270,9 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
     row.innerHTML = `
         <td><span class="item-num">${numLabel}</span> <strong>${item.name}</strong></td>
         <td>${item.unit || 'N/A'}</td>
-        <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+        <td>${qtyObj.functioning}</td>
+        <td>${qtyObj.notFunctioning}</td>
+        <td>${qtyObj.none}</td>
         <td>${freq}</td>
         <td>${lastCal}</td>
         <td>${nextCal}</td>
@@ -1362,7 +1378,6 @@ function renderRecords() {
     const yearSelect = document.getElementById('records-year');
     const searchInput = document.getElementById('records-search');
     const categoryFilter = document.getElementById('records-category-filter');
-    const statusFilter = document.getElementById('records-status-filter');
     const countLabel = document.getElementById('records-count');
 
     if (!tbody) return;
@@ -1370,7 +1385,6 @@ function renderRecords() {
     const selectedYear = yearSelect ? yearSelect.value : 'all';
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
-    const selectedStatus = statusFilter ? statusFilter.value : 'all';
 
     let inventory = getInventory();
 
@@ -1386,11 +1400,6 @@ function renderRecords() {
     // Category filter
     if (selectedCategory !== 'all') {
         inventory = inventory.filter(item => item.category === selectedCategory);
-    }
-
-    // Status filter (Quantity per Physical Count)
-    if (selectedStatus !== 'all') {
-        inventory = inventory.filter(item => getQuantity(item) === selectedStatus);
     }
 
     // Search filter
@@ -1424,7 +1433,7 @@ function renderRecords() {
     const allCategories = [...new Set([...categoriesFromItems, ...categoriesFromSubs, ...categoriesFromSubSubs])].sort();
 
     if (!allCategories.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="no-records">No records found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="no-records">No records found.</td></tr>';
         return;
     }
 
@@ -1437,7 +1446,7 @@ function renderRecords() {
         // Category header row — NO number, just bold uppercase
         const catRow = document.createElement('tr');
         catRow.className = 'records-cat-header';
-        catRow.innerHTML = `<td colspan="9" class="records-cat-cell">${cat.toUpperCase()}</td>`;
+        catRow.innerHTML = `<td colspan="10" class="records-cat-cell">${cat.toUpperCase()}</td>`;
         tbody.appendChild(catRow);
 
         if (catSubs.length > 0) {
@@ -1456,7 +1465,7 @@ function renderRecords() {
                 const subRow = document.createElement('tr');
                 subRow.className = 'records-sub-header';
                 subRow.innerHTML = `
-                    <td colspan="9" class="records-sub-cell">
+                    <td colspan="10" class="records-sub-cell">
                         <div style="display:flex;align-items:center;justify-content:space-between;">
                             <span>${String.fromCharCode(subLetterCode)}. ${sub.name}</span>
                             <span class="sub-actions" style="display:flex;gap:6px;">
@@ -1487,7 +1496,7 @@ function renderRecords() {
                         const ssRow = document.createElement('tr');
                         ssRow.className = 'records-subsub-header';
                         ssRow.innerHTML = `
-                            <td colspan="9" class="records-subsub-cell">
+                            <td colspan="10" class="records-subsub-cell">
                                 <div style="display:flex;align-items:center;justify-content:space-between;">
                                     <span>${subSubNum}. ${ss.name}</span>
                                     <span class="sub-actions" style="display:flex;gap:6px;">
@@ -1556,7 +1565,10 @@ function openEditModal(id) {
     document.getElementById('edit-item-name').value = item.name;
     document.getElementById('edit-item-subcategory').value = item.subcategory || '';
     document.getElementById('edit-item-sub-subcategory').value = item.subSubcategory || '';
-    document.getElementById('edit-item-quantity').value = getQuantity(item);
+    const qtyObj = getQuantityObj(item);
+    document.getElementById('edit-qty-functioning').value = qtyObj.functioning;
+    document.getElementById('edit-qty-not-functioning').value = qtyObj.notFunctioning;
+    document.getElementById('edit-qty-none').value = qtyObj.none;
     document.getElementById('edit-frequency-do').value = item.frequencyAsPerDO || '';
     document.getElementById('edit-date-last-calibrated').value = item.dateLastCalibrated || '';
     document.getElementById('edit-schedule-next-calibration').value = getNextCalibration(item) || '';
@@ -1596,7 +1608,11 @@ async function saveEdit() {
     const subcategory = document.getElementById('edit-item-subcategory').value.trim();
     const subSubcategory = document.getElementById('edit-item-sub-subcategory').value.trim();
     const unit = document.getElementById('edit-item-unit').value;
-    const quantityPerPhysicalCount = document.getElementById('edit-item-quantity').value;
+    const quantityPerPhysicalCount = {
+        functioning: parseInt(document.getElementById('edit-qty-functioning').value) || 0,
+        notFunctioning: parseInt(document.getElementById('edit-qty-not-functioning').value) || 0,
+        none: parseInt(document.getElementById('edit-qty-none').value) || 0
+    };
     const frequencyAsPerDO = document.getElementById('edit-frequency-do').value.trim();
     const dateLastCalibrated = document.getElementById('edit-date-last-calibrated').value;
     const scheduleDateOfNextCalibration = document.getElementById('edit-schedule-next-calibration').value;
@@ -1638,12 +1654,9 @@ function printRecords() {
     const yearSelect = document.getElementById('records-year');
     const searchInput = document.getElementById('records-search');
     const categoryFilter = document.getElementById('records-category-filter');
-    const statusFilter = document.getElementById('records-status-filter');
-
     const selectedYear = yearSelect ? yearSelect.value : 'all';
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
-    const selectedStatus = statusFilter ? statusFilter.value : 'all';
 
     let inventory = getInventory();
 
@@ -1657,10 +1670,6 @@ function printRecords() {
 
     if (selectedCategory !== 'all') {
         inventory = inventory.filter(item => item.category === selectedCategory);
-    }
-
-    if (selectedStatus !== 'all') {
-        inventory = inventory.filter(item => getQuantity(item) === selectedStatus);
     }
 
     if (query) {
@@ -1754,10 +1763,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
 
                             let itemIdx = 1;
                             ssItems.forEach(item => {
-                                const qty = getQuantity(item);
-                                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                                const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                                const qtyObj = getQuantityObj(item);
                                 const freq = item.frequencyAsPerDO || '';
                                 const lastCal = item.dateLastCalibrated || '';
                                 const nextCal = getNextCalibration(item) || '';
@@ -1766,9 +1772,9 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                                     <tr>
                                         <td>${itemIdx}. ${escapeHtml(item.name)}</td>
                                         <td>${escapeHtml(item.unit || '')}</td>
-                                        <td>${escapeHtml(functioning)}</td>
-                                        <td>${escapeHtml(notFunctioning)}</td>
-                                        <td>${escapeHtml(noneVal)}</td>
+                                        <td>${escapeHtml(qtyObj.functioning || '')}</td>
+                                        <td>${escapeHtml(qtyObj.notFunctioning || '')}</td>
+                                        <td>${escapeHtml(qtyObj.none || '')}</td>
                                         <td>${escapeHtml(freq)}</td>
                                         <td class="date-cell">${escapeHtml(lastCal)}</td>
                                         <td class="date-cell">${escapeHtml(nextCal)}</td>
@@ -1783,10 +1789,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                         if (noSsItems.length > 0) {
                             let itemIdx = 1;
                             noSsItems.forEach(item => {
-                                const qty = getQuantity(item);
-                                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                                const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                                const qtyObj = getQuantityObj(item);
                                 const freq = item.frequencyAsPerDO || '';
                                 const lastCal = item.dateLastCalibrated || '';
                                 const nextCal = getNextCalibration(item) || '';
@@ -1795,9 +1798,9 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                                     <tr>
                                         <td>${itemIdx}. ${escapeHtml(item.name)}</td>
                                         <td>${escapeHtml(item.unit || '')}</td>
-                                        <td>${escapeHtml(functioning)}</td>
-                                        <td>${escapeHtml(notFunctioning)}</td>
-                                        <td>${escapeHtml(noneVal)}</td>
+                                        <td>${escapeHtml(qtyObj.functioning || '')}</td>
+                                        <td>${escapeHtml(qtyObj.notFunctioning || '')}</td>
+                                        <td>${escapeHtml(qtyObj.none || '')}</td>
                                         <td>${escapeHtml(freq)}</td>
                                         <td class="date-cell">${escapeHtml(lastCal)}</td>
                                         <td class="date-cell">${escapeHtml(nextCal)}</td>
@@ -1810,10 +1813,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                     } else {
                         let itemIdx = 1;
                         subItems.forEach(item => {
-                            const qty = getQuantity(item);
-                            const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                            const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                            const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                            const qtyObj = getQuantityObj(item);
                             const freq = item.frequencyAsPerDO || '';
                             const lastCal = item.dateLastCalibrated || '';
                             const nextCal = getNextCalibration(item) || '';
@@ -1822,9 +1822,9 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                                 <tr>
                                     <td>${itemIdx}. ${escapeHtml(item.name)}</td>
                                     <td>${escapeHtml(item.unit || '')}</td>
-                                    <td>${escapeHtml(functioning)}</td>
-                                    <td>${escapeHtml(notFunctioning)}</td>
-                                    <td>${escapeHtml(noneVal)}</td>
+                                    <td>${escapeHtml(qtyObj.functioning || '')}</td>
+                                    <td>${escapeHtml(qtyObj.notFunctioning || '')}</td>
+                                    <td>${escapeHtml(qtyObj.none || '')}</td>
                                     <td>${escapeHtml(freq)}</td>
                                     <td class="date-cell">${escapeHtml(lastCal)}</td>
                                     <td class="date-cell">${escapeHtml(nextCal)}</td>
@@ -1840,10 +1840,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                 if (noSubItems.length > 0) {
                     let itemIdx = 1;
                     noSubItems.forEach(item => {
-                        const qty = getQuantity(item);
-                        const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                        const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                        const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                        const qtyObj = getQuantityObj(item);
                         const freq = item.frequencyAsPerDO || '';
                         const lastCal = item.dateLastCalibrated || '';
                         const nextCal = getNextCalibration(item) || '';
@@ -1852,9 +1849,9 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                             <tr>
                                 <td>${itemIdx}. ${escapeHtml(item.name)}</td>
                                 <td>${escapeHtml(item.unit || '')}</td>
-                                <td>${escapeHtml(functioning)}</td>
-                                <td>${escapeHtml(notFunctioning)}</td>
-                                <td>${escapeHtml(noneVal)}</td>
+                                <td>${escapeHtml(qtyObj.functioning || '')}</td>
+                                <td>${escapeHtml(qtyObj.notFunctioning || '')}</td>
+                                <td>${escapeHtml(qtyObj.none || '')}</td>
                                 <td>${escapeHtml(freq)}</td>
                                 <td class="date-cell">${escapeHtml(lastCal)}</td>
                                 <td class="date-cell">${escapeHtml(nextCal)}</td>
@@ -1866,10 +1863,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                 }
             } else {
                 catItems.forEach((item, idx) => {
-                    const qty = getQuantity(item);
-                    const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                    const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                    const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                    const qtyObj = getQuantityObj(item);
                     const freq = item.frequencyAsPerDO || '';
                     const lastCal = item.dateLastCalibrated || '';
                     const nextCal = getNextCalibration(item) || '';
@@ -1878,9 +1872,9 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                         <tr>
                             <td>${idx + 1}. ${escapeHtml(item.name)}</td>
                             <td>${escapeHtml(item.unit || '')}</td>
-                            <td>${escapeHtml(functioning)}</td>
-                            <td>${escapeHtml(notFunctioning)}</td>
-                            <td>${escapeHtml(noneVal)}</td>
+                            <td>${escapeHtml(qtyObj.functioning || '')}</td>
+                            <td>${escapeHtml(qtyObj.notFunctioning || '')}</td>
+                            <td>${escapeHtml(qtyObj.none || '')}</td>
                             <td>${escapeHtml(freq)}</td>
                             <td class="date-cell">${escapeHtml(lastCal)}</td>
                             <td class="date-cell">${escapeHtml(nextCal)}</td>
@@ -2296,13 +2290,13 @@ function searchInventory() {
     tbody.innerHTML = '';
 
     if (!filteredInventory.length) {
-        tbody.innerHTML = '<tr><td colspan="9">No matching materials found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11">No matching materials found.</td></tr>';
         return;
     }
 
     filteredInventory.forEach(item => {
         const row = document.createElement('tr');
-        const qty = getQuantity(item);
+        const qtyObj = getQuantityObj(item);
         const freq = getFrequency(item);
         const lastCal = getDateLastCalibrated(item);
         const nextCal = getNextCalibration(item) || 'N/A';
@@ -2310,7 +2304,9 @@ function searchInventory() {
             <td>${item.name}</td>
             <td>${item.category}${item.subcategory ? ' — ' + item.subcategory : ''}</td>
             <td>${item.unit || 'N/A'}</td>
-            <td>${qty}</td>
+            <td>${qtyObj.functioning}</td>
+            <td>${qtyObj.notFunctioning}</td>
+            <td>${qtyObj.none}</td>
             <td>${freq}</td>
             <td>${lastCal}</td>
             <td>${nextCal}</td>

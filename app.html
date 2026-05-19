@@ -197,13 +197,21 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="item-quantity">Quantity per Physical Count</label>
-                                <select id="item-quantity">
-                                    <option value="" disabled selected hidden>Select</option>
-                                    <option value="functioning">Functioning</option>
-                                    <option value="not-functioning">Not Functioning</option>
-                                    <option value="none">None</option>
-                                </select>
+                                <label>Quantity per Physical Count</label>
+                                <div class="quantity-inputs">
+                                    <div>
+                                        <label for="item-qty-functioning">Functioning</label>
+                                        <input type="number" id="item-qty-functioning" min="0" value="0">
+                                    </div>
+                                    <div>
+                                        <label for="item-qty-not-functioning">Not Functioning</label>
+                                        <input type="number" id="item-qty-not-functioning" min="0" value="0">
+                                    </div>
+                                    <div>
+                                        <label for="item-qty-none">None</label>
+                                        <input type="number" id="item-qty-none" min="0" value="0">
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="frequency-do">Frequency as per D.O. 184 S 2022</label>
@@ -234,7 +242,9 @@
                                         <th>Apparatus/ Equipment</th>
                                         <th>Category</th>
                                         <th>Unit of Measure</th>
-                                        <th>Quantity per Physical Count</th>
+                                        <th>Functioning</th>
+                                        <th>Not Functioning</th>
+                                        <th>None</th>
                                         <th>Frequency as per D.O. 184 S 2022</th>
                                         <th>Date Last Calibrated</th>
                                         <th>Schedule Date of Next Calibration</th>
@@ -283,12 +293,6 @@
                             <select id="records-category-filter">
                                 <option value="all">All Categories</option>
                             </select>
-                            <select id="records-status-filter">
-                                <option value="all">All Quantity</option>
-                                <option value="functioning">Functioning</option>
-                                <option value="not-functioning">Not Functioning</option>
-                                <option value="none">None</option>
-                            </select>
                             <select id="records-year">
                                 <option value="all">All Years</option>
                             </select>
@@ -301,7 +305,9 @@
                                 <tr>
                                     <th>Apparatus/ Equipment</th>
                                     <th>Unit of Measure</th>
-                                    <th>Quantity per Physical Count</th>
+                                    <th>Functioning</th>
+                                    <th>Not Functioning</th>
+                                    <th>None</th>
                                     <th>Frequency as per D.O. 184 S 2022</th>
                                     <th>Date Last Calibrated</th>
                                     <th>Schedule Date of Next Calibration</th>
@@ -311,7 +317,7 @@
                             </thead>
                             <tbody id="records-body">
                                 <tr>
-                                    <td colspan="8" class="no-records">No records found.</td>
+                                    <td colspan="10" class="no-records">No records found.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -476,13 +482,21 @@
                             <select id="edit-item-unit"></select>
                         </div>
                         <div class="form-group">
-                            <label for="edit-item-quantity">Quantity per Physical Count</label>
-                            <select id="edit-item-quantity">
-                                <option value="">Select</option>
-                                <option value="functioning">Functioning</option>
-                                <option value="not-functioning">Not Functioning</option>
-                                <option value="none">None</option>
-                            </select>
+                            <label>Quantity per Physical Count</label>
+                            <div class="quantity-inputs">
+                                <div>
+                                    <label for="edit-qty-functioning">Functioning</label>
+                                    <input type="number" id="edit-qty-functioning" min="0" value="0">
+                                </div>
+                                <div>
+                                    <label for="edit-qty-not-functioning">Not Functioning</label>
+                                    <input type="number" id="edit-qty-not-functioning" min="0" value="0">
+                                </div>
+                                <div>
+                                    <label for="edit-qty-none">None</label>
+                                    <input type="number" id="edit-qty-none" min="0" value="0">
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="edit-frequency-do">Frequency as per D.O. 184 S 2022</label>
@@ -523,6 +537,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
 </body>
 </html>
