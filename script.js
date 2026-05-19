@@ -16,6 +16,9 @@ let calSelectedDate = null;
 let inventoryCache = [];
 let subcategoriesCache = [];
 let subsubcategoriesCache = [];
+let archivesCache = [];
+let archiveViewCache = null; // full archive object when viewing an archive
+let currentArea = 'current'; // 'current' or archive ID
 let pendingConfirmAction = null;
 let autoRefreshInterval = null;
 const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
@@ -30,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await syncSubcategories();
     await syncSubsubcategories();
     await syncInventory();
+    await syncArchives();
     startAutoRefresh();
 
     // Instant sync when user returns to this browser tab
@@ -202,6 +206,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     const recordsCategory = document.getElementById('records-category-filter');
     if (recordsCategory) {
         recordsCategory.addEventListener('change', renderRecords);
+    }
+
+    const recordsArea = document.getElementById('records-area-filter');
+    if (recordsArea) {
+        recordsArea.addEventListener('change', async function() {
+            currentArea = this.value;
+            const deleteBtn = document.getElementById('delete-archive-btn');
+            if (currentArea !== 'current') {
+                try {
+                    const res = await fetch(`${API_BASE}/archives/${currentArea}`);
+                    if (res.ok) {
+                        archiveViewCache = await res.json();
+                    } else {
+                        archiveViewCache = null;
+                    }
+                } catch (e) {
+                    archiveViewCache = null;
+                }
+                if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+            } else {
+                archiveViewCache = null;
+                if (deleteBtn) deleteBtn.style.display = 'none';
+            }
+            renderRecords();
+        });
     }
 
     document.getElementById('edit-form').addEventListener('submit', function(e) {
@@ -462,16 +491,16 @@ function removeSelectedUnit() {
 function getQuantityObj(item) {
     if (item.quantityPerPhysicalCount && typeof item.quantityPerPhysicalCount === 'object') {
         return {
-            functioning: Number(item.quantityPerPhysicalCount.functioning) || 0,
-            notFunctioning: Number(item.quantityPerPhysicalCount.notFunctioning) || 0,
-            none: Number(item.quantityPerPhysicalCount.none) || 0
+            functioning: item.quantityPerPhysicalCount.functioning || '',
+            notFunctioning: item.quantityPerPhysicalCount.notFunctioning || '',
+            none: item.quantityPerPhysicalCount.none || ''
         };
     }
     const val = (item.quantityPerPhysicalCount || item.status || 'none').toString().toLowerCase();
-    if (val === 'functioning') return { functioning: 1, notFunctioning: 0, none: 0 };
-    if (val === 'not-functioning' || val === 'not functioning') return { functioning: 0, notFunctioning: 1, none: 0 };
-    if (val === 'none') return { functioning: 0, notFunctioning: 0, none: 1 };
-    return { functioning: 0, notFunctioning: 0, none: 0 };
+    if (val === 'functioning') return { functioning: '1', notFunctioning: '', none: '' };
+    if (val === 'not-functioning' || val === 'not functioning') return { functioning: '', notFunctioning: '1', none: '' };
+    if (val === 'none') return { functioning: '', notFunctioning: '', none: '1' };
+    return { functioning: '', notFunctioning: '', none: '' };
 }
 
 function getQuantity(item) {
@@ -577,9 +606,9 @@ async function addMaterial() {
     const subSubcategory = document.getElementById('item-sub-subcategory').value.trim();
     const unit = document.getElementById('item-unit').value;
     const quantityPerPhysicalCount = {
-        functioning: parseInt(document.getElementById('item-qty-functioning').value) || 0,
-        notFunctioning: parseInt(document.getElementById('item-qty-not-functioning').value) || 0,
-        none: parseInt(document.getElementById('item-qty-none').value) || 0
+        functioning: document.getElementById('item-qty-functioning').value.trim(),
+        notFunctioning: document.getElementById('item-qty-not-functioning').value.trim(),
+        none: document.getElementById('item-qty-none').value.trim()
     };
     const frequencyAsPerDO = document.getElementById('frequency-do').value.trim();
     const dateLastCalibrated = document.getElementById('date-last-calibrated').value;
@@ -643,8 +672,8 @@ async function deleteMaterial(id) {
 function updateDashboard() {
     const inventory = getInventory();
     const total = inventory.length;
-    const functioningCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).functioning, 0);
-    const notFunctioningCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).notFunctioning, 0);
+    const functioningCount = inventory.filter(item => getQuantityObj(item).functioning !== '').length;
+    const notFunctioningCount = inventory.filter(item => getQuantityObj(item).notFunctioning !== '').length;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -691,9 +720,9 @@ function updateCharts() {
     today.setHours(0, 0, 0, 0);
 
     // ── Chart 1: Equipment Status Breakdown (Doughnut) ──
-    const functioning = inventory.reduce((sum, item) => sum + getQuantityObj(item).functioning, 0);
-    const notFunctioning = inventory.reduce((sum, item) => sum + getQuantityObj(item).notFunctioning, 0);
-    const noneCount = inventory.reduce((sum, item) => sum + getQuantityObj(item).none, 0);
+    const functioning = inventory.filter(item => getQuantityObj(item).functioning !== '').length;
+    const notFunctioning = inventory.filter(item => getQuantityObj(item).notFunctioning !== '').length;
+    const noneCount = inventory.filter(item => getQuantityObj(item).none !== '').length;
 
     if (statusChart) statusChart.destroy();
     const statusCtx = document.getElementById('status-chart');
@@ -1000,6 +1029,97 @@ async function syncInventory() {
     renderCalendar();
 }
 
+async function syncArchives() {
+    try {
+        const res = await fetch(`${API_BASE}/archives`);
+        if (!res.ok) throw new Error('Failed to fetch archives');
+        archivesCache = await res.json();
+    } catch (error) {
+        console.error('Failed to sync archives', error);
+        archivesCache = [];
+    }
+    populateAreaDropdown();
+}
+
+function openArchiveModal() {
+    const modal = document.getElementById('archive-modal');
+    const input = document.getElementById('archive-name-input');
+    if (!modal || !input) return;
+    input.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => input.focus(), 50);
+}
+
+function closeArchiveModal() {
+    const modal = document.getElementById('archive-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function deleteCurrentArchive() {
+    if (currentArea === 'current' || !archiveViewCache) return;
+    if (!confirm(`Delete archive "${archiveViewCache.name}"?\n\nThis cannot be undone.`)) return;
+    try {
+        const res = await fetch(`${API_BASE}/archives/${currentArea}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to delete archive.');
+            return;
+        }
+        currentArea = 'current';
+        archiveViewCache = null;
+        await syncArchives();
+        renderRecords();
+    } catch (error) {
+        alert('Failed to delete archive. Backend is not running.');
+    }
+}
+
+async function submitArchive() {
+    const input = document.getElementById('archive-name-input');
+    const name = input ? input.value.trim() : '';
+    if (!name) {
+        alert('Please enter a name for this inspection or project.');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/archives`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to save inspection data.');
+            return;
+        }
+        closeArchiveModal();
+        await syncInventory();
+        await syncArchives();
+        alert(`"${name}" has been saved successfully. Current inventory has been reset for the next inspection.`);
+    } catch (error) {
+        alert('Failed to save. Please make sure the backend is running.');
+    }
+}
+
+function populateAreaDropdown() {
+    const select = document.getElementById('records-area-filter');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '<option value="current">Current</option>';
+    archivesCache.forEach(arch => {
+        const opt = document.createElement('option');
+        opt.value = arch.id;
+        opt.textContent = arch.name;
+        select.appendChild(opt);
+    });
+    if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+        select.value = currentVal;
+    } else {
+        select.value = 'current';
+        currentArea = 'current';
+    }
+}
+
 function openCategoryModal() {
     const modal = document.getElementById('category-modal');
     const input = document.getElementById('new-category-input');
@@ -1161,6 +1281,7 @@ function startAutoRefresh() {
         await syncSubcategories();
         await syncSubsubcategories();
         await syncInventory();
+        await syncArchives();
         const newHash = inventoryHash(inventoryCache);
         if (prevHash !== newHash) {
             // Data changed (add, edit, or delete) — re-render whatever is visible
@@ -1227,6 +1348,17 @@ function populateYearDropdown() {
         if (item.category) cats.add(item.category);
     });
 
+    // Also extract years from archive names (e.g. "2024 Annual Inspection" → 2024)
+    archivesCache.forEach(arch => {
+        if (arch.name) {
+            const match = arch.name.match(/\b(19|20)\d{2}\b/);
+            if (match) years.add(parseInt(match[0]));
+        }
+        if (arch.createdAt) {
+            years.add(new Date(arch.createdAt).getFullYear());
+        }
+    });
+
     for (let y = currentYear; y >= 2020; y--) {
         years.add(y);
     }
@@ -1253,7 +1385,7 @@ function populateYearDropdown() {
     }
 }
 
-function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
+function renderRecordItemRow(tbody, item, subSubNum, itemIdx, readOnly) {
     const row = document.createElement('tr');
     if (itemIdx !== '') row.classList.add('records-item-indented');
     const qtyObj = getQuantityObj(item);
@@ -1267,6 +1399,15 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
 
     const numLabel = itemIdx !== '' ? `${subSubNum}.${itemIdx}` : `${subSubNum}`;
 
+    const actions = readOnly ? '' : `
+        <td>
+            <div class="action-btns">
+                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+            </div>
+        </td>
+    `;
+
     row.innerHTML = `
         <td><span class="item-num">${numLabel}</span> <strong>${item.name}</strong></td>
         <td>${item.unit || 'N/A'}</td>
@@ -1277,12 +1418,7 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
         <td>${lastCal}</td>
         <td>${nextCal}</td>
         <td>${item.remarks || ''}</td>
-        <td>
-            <div class="action-btns">
-                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
-            </div>
-        </td>
+        ${actions}
     `;
     tbody.appendChild(row);
 }
@@ -1382,14 +1518,15 @@ function renderRecords() {
 
     if (!tbody) return;
 
+    const isArchiveView = currentArea !== 'current' && archiveViewCache;
     const selectedYear = yearSelect ? yearSelect.value : 'all';
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
 
-    let inventory = getInventory();
+    let inventory = isArchiveView ? archiveViewCache.items : getInventory();
 
-    // Year filter
-    if (selectedYear !== 'all') {
+    // Year filter (skip for archive view — archives have their own date)
+    if (!isArchiveView && selectedYear !== 'all') {
         const yearNum = parseInt(selectedYear);
         inventory = inventory.filter(item => {
             if (!item.createdAt) return false;
@@ -1413,7 +1550,8 @@ function renderRecords() {
     }
 
     if (countLabel) {
-        countLabel.textContent = `${inventory.length} item${inventory.length !== 1 ? 's' : ''} total`;
+        const labelPrefix = isArchiveView ? `[${archiveViewCache.name}] ` : '';
+        countLabel.textContent = `${labelPrefix}${inventory.length} item${inventory.length !== 1 ? 's' : ''} total`;
     }
 
     tbody.innerHTML = '';
@@ -1440,8 +1578,7 @@ function renderRecords() {
     allCategories.forEach(cat => {
         const catItems = grouped[cat] || [];
         const catSubs = subcategoriesCache
-            .filter(s => s.category === cat)
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .filter(s => s.category === cat);
 
         // Category header row — NO number, just bold uppercase
         const catRow = document.createElement('tr');
@@ -1464,14 +1601,17 @@ function renderRecords() {
                 // Subcategory header row (A, B, C...) with edit/delete buttons
                 const subRow = document.createElement('tr');
                 subRow.className = 'records-sub-header';
+                const subActions = isArchiveView ? '' : `
+                    <span class="sub-actions" style="display:flex;gap:6px;">
+                        <button class="action-btn edit" title="Rename subcategory" onclick="renameSubcategoryPrompt('${escName}', '${escCat}')">✏️</button>
+                        <button class="action-btn delete" title="Delete subcategory" onclick="deleteSubcategoryPrompt('${escName}', '${escCat}')">🗑️</button>
+                    </span>
+                `;
                 subRow.innerHTML = `
                     <td colspan="10" class="records-sub-cell">
                         <div style="display:flex;align-items:center;justify-content:space-between;">
                             <span>${String.fromCharCode(subLetterCode)}. ${sub.name}</span>
-                            <span class="sub-actions" style="display:flex;gap:6px;">
-                                <button class="action-btn edit" title="Rename subcategory" onclick="renameSubcategoryPrompt('${escName}', '${escCat}')">✏️</button>
-                                <button class="action-btn delete" title="Delete subcategory" onclick="deleteSubcategoryPrompt('${escName}', '${escCat}')">🗑️</button>
-                            </span>
+                            ${subActions}
                         </div>
                     </td>
                 `;
@@ -1480,8 +1620,7 @@ function renderRecords() {
 
                 // Sub-subcategories under this subcategory
                 const subSubcats = subsubcategoriesCache
-                    .filter(ss => ss.subcategory === sub.name && ss.category === cat)
-                    .sort((a, b) => a.name.localeCompare(b.name));
+                    .filter(ss => ss.subcategory === sub.name && ss.category === cat);
 
                 let itemIdx = 1; // Running counter for ALL items under this subcategory
 
@@ -1495,14 +1634,17 @@ function renderRecords() {
                         // Sub-subcategory header row (1, 2, 3... matches subcategory letter position)
                         const ssRow = document.createElement('tr');
                         ssRow.className = 'records-subsub-header';
+                        const ssActions = isArchiveView ? '' : `
+                            <span class="sub-actions" style="display:flex;gap:6px;">
+                                <button class="action-btn edit" title="Rename sub-subcategory" onclick="renameSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">✏️</button>
+                                <button class="action-btn delete" title="Delete sub-subcategory" onclick="deleteSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">🗑️</button>
+                            </span>
+                        `;
                         ssRow.innerHTML = `
                             <td colspan="10" class="records-subsub-cell">
                                 <div style="display:flex;align-items:center;justify-content:space-between;">
                                     <span>${subSubNum}. ${ss.name}</span>
-                                    <span class="sub-actions" style="display:flex;gap:6px;">
-                                        <button class="action-btn edit" title="Rename sub-subcategory" onclick="renameSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">✏️</button>
-                                        <button class="action-btn delete" title="Delete sub-subcategory" onclick="deleteSubsubcategoryPrompt('${escSsName}', '${escSsSub}', '${escSsCat}')">🗑️</button>
-                                    </span>
+                                    ${ssActions}
                                 </div>
                             </td>
                         `;
@@ -1510,7 +1652,7 @@ function renderRecords() {
 
                         // Items under this sub-subcategory (1.1, 1.2 / 2.1, 2.2 / 3.1, 3.2...)
                         ssItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
                             itemIdx++;
                         });
                     });
@@ -1519,7 +1661,7 @@ function renderRecords() {
                     const noSsItems = subItems.filter(item => !item.subSubcategory);
                     if (noSsItems.length > 0) {
                         noSsItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
                             itemIdx++;
                         });
                     }
@@ -1527,7 +1669,7 @@ function renderRecords() {
                     // No registered sub-subcategories — items numbered with subSubNum prefix
                     if (subItems.length > 0) {
                         subItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
                             itemIdx++;
                         });
                     }
@@ -1541,7 +1683,7 @@ function renderRecords() {
             if (noSubItems.length > 0) {
                 let itemIdx = lastItemIdx;
                 noSubItems.forEach(item => {
-                    renderRecordItemRow(tbody, item, lastSubSubNum, itemIdx);
+                    renderRecordItemRow(tbody, item, lastSubSubNum, itemIdx, isArchiveView);
                     itemIdx++;
                 });
             }
@@ -1549,7 +1691,7 @@ function renderRecords() {
             // No registered subcategories — just list items with plain numbers
             let itemIdx = 1;
             catItems.forEach(item => {
-                renderRecordItemRow(tbody, item, itemIdx, '');
+                renderRecordItemRow(tbody, item, itemIdx, '', isArchiveView);
                 itemIdx++;
             });
         }
@@ -1609,9 +1751,9 @@ async function saveEdit() {
     const subSubcategory = document.getElementById('edit-item-sub-subcategory').value.trim();
     const unit = document.getElementById('edit-item-unit').value;
     const quantityPerPhysicalCount = {
-        functioning: parseInt(document.getElementById('edit-qty-functioning').value) || 0,
-        notFunctioning: parseInt(document.getElementById('edit-qty-not-functioning').value) || 0,
-        none: parseInt(document.getElementById('edit-qty-none').value) || 0
+        functioning: document.getElementById('edit-qty-functioning').value.trim(),
+        notFunctioning: document.getElementById('edit-qty-not-functioning').value.trim(),
+        none: document.getElementById('edit-qty-none').value.trim()
     };
     const frequencyAsPerDO = document.getElementById('edit-frequency-do').value.trim();
     const dateLastCalibrated = document.getElementById('edit-date-last-calibrated').value;
@@ -1739,8 +1881,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
 
             const catItems = grouped[cat];
             const catSubs = subcategoriesCache
-                .filter(s => s.category === cat)
-                .sort((a, b) => a.name.localeCompare(b.name));
+                .filter(s => s.category === cat);
 
             if (catSubs.length > 0) {
                 let subLetterCode = 65; // 'A'
@@ -1751,8 +1892,7 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                     subLetterCode++;
 
                     const subSubcats = subsubcategoriesCache
-                        .filter(ss => ss.subcategory === sub.name && ss.category === cat)
-                        .sort((a, b) => a.name.localeCompare(b.name));
+                        .filter(ss => ss.subcategory === sub.name && ss.category === cat);
 
                     if (subSubcats.length > 0) {
                         let subSubNum = 1;

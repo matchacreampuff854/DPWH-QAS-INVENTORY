@@ -201,15 +201,15 @@
                                 <div class="quantity-inputs">
                                     <div>
                                         <label for="item-qty-functioning">Functioning</label>
-                                        <input type="number" id="item-qty-functioning" min="0" value="0">
+                                        <input type="text" id="item-qty-functioning" placeholder="e.g. 2">
                                     </div>
                                     <div>
                                         <label for="item-qty-not-functioning">Not Functioning</label>
-                                        <input type="number" id="item-qty-not-functioning" min="0" value="0">
+                                        <input type="text" id="item-qty-not-functioning" placeholder="e.g. 1L">
                                     </div>
                                     <div>
                                         <label for="item-qty-none">None</label>
-                                        <input type="number" id="item-qty-none" min="0" value="0">
+                                        <input type="text" id="item-qty-none" placeholder="e.g. 5L">
                                     </div>
                                 </div>
                             </div>
@@ -277,10 +277,9 @@
                             <p id="records-count">0 items total</p>
                         </div>
                         <div class="records-actions">
+                            <button type="button" class="btn btn-secondary" onclick="openArchiveModal()">💾 Save</button>
+                            <button type="button" id="delete-archive-btn" class="btn btn-danger" style="display:none;" onclick="deleteCurrentArchive()">🗑️ Delete</button>
                             <button type="button" class="btn btn-secondary" onclick="openPrintModal()">🖨️ Print</button>
-                            <button type="button" class="btn btn-primary" onclick="switchTab('materials'); setTimeout(scrollToAddMaterial, 300);">
-                                + Add Item
-                            </button>
                         </div>
                     </div>
 
@@ -290,6 +289,9 @@
                             <input type="text" id="records-search" placeholder="Search items...">
                         </div>
                         <div class="records-filters">
+                            <select id="records-area-filter">
+                                <option value="current">Current</option>
+                            </select>
                             <select id="records-category-filter">
                                 <option value="all">All Categories</option>
                             </select>
@@ -417,6 +419,24 @@
                 </div>
             </div>
 
+            <!-- Save Archive Modal -->
+            <div id="archive-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closeArchiveModal()"></div>
+                <div class="modal-content popup-modal">
+                    <button type="button" class="modal-close" onclick="closeArchiveModal()">&times;</button>
+                    <h3>Save Inspection Data</h3>
+                    <p class="modal-subtitle">Enter a name for this inspection or project (e.g., 2024 Annual, Project X).</p>
+                    <div class="form-group">
+                        <label for="archive-name-input">Inspection / Project Name</label>
+                        <input type="text" id="archive-name-input" placeholder="e.g. 2024 Annual Inspection">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-tertiary" onclick="closeArchiveModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="submitArchive()">Save</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Print Settings Modal -->
             <div id="print-modal" class="modal" style="display: none;">
                 <div class="modal-overlay" onclick="closePrintModal()"></div>
@@ -486,15 +506,15 @@
                             <div class="quantity-inputs">
                                 <div>
                                     <label for="edit-qty-functioning">Functioning</label>
-                                    <input type="number" id="edit-qty-functioning" min="0" value="0">
+                                    <input type="text" id="edit-qty-functioning">
                                 </div>
                                 <div>
                                     <label for="edit-qty-not-functioning">Not Functioning</label>
-                                    <input type="number" id="edit-qty-not-functioning" min="0" value="0">
+                                    <input type="text" id="edit-qty-not-functioning">
                                 </div>
                                 <div>
                                     <label for="edit-qty-none">None</label>
-                                    <input type="number" id="edit-qty-none" min="0" value="0">
+                                    <input type="text" id="edit-qty-none">
                                 </div>
                             </div>
                         </div>
@@ -537,6 +557,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js?v=12"></script>
+    <script src="script.js?v=17"></script>
 </body>
 </html>

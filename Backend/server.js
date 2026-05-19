@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data', 'inventory.json');
 const SUBCATEGORIES_FILE = path.join(__dirname, 'data', 'subcategories.json');
 const SUBSUBCATEGORIES_FILE = path.join(__dirname, 'data', 'subsubcategories.json');
+const ARCHIVES_FILE = path.join(__dirname, 'data', 'archives.json');
 
 app.use(cors());
 app.use(express.json());
@@ -77,6 +78,27 @@ function readInventory() {
 function writeInventory(inventory) {
     ensureDataFile();
     fs.writeFileSync(DATA_FILE, JSON.stringify(inventory, null, 2));
+}
+
+function ensureArchivesFile() {
+    const dir = path.dirname(ARCHIVES_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(ARCHIVES_FILE)) {
+        fs.writeFileSync(ARCHIVES_FILE, JSON.stringify([], null, 2));
+    }
+}
+
+function readArchives() {
+    ensureArchivesFile();
+    const data = fs.readFileSync(ARCHIVES_FILE, 'utf8');
+    return JSON.parse(data);
+}
+
+function writeArchives(archives) {
+    ensureArchivesFile();
+    fs.writeFileSync(ARCHIVES_FILE, JSON.stringify(archives, null, 2));
 }
 
 // GET all inventory items
@@ -382,6 +404,87 @@ app.delete('/api/subsubcategories', (req, res) => {
         res.json({ message: 'Sub-subcategory deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete sub-subcategory' });
+    }
+});
+
+// GET all archives (lightweight list)
+app.get('/api/archives', (req, res) => {
+    try {
+        const archives = readArchives();
+        const list = archives.map(a => ({ id: a.id, name: a.name, createdAt: a.createdAt }));
+        res.json(list);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read archives' });
+    }
+});
+
+// GET single archive (full data)
+app.get('/api/archives/:id', (req, res) => {
+    try {
+        const archives = readArchives();
+        const archive = archives.find(a => a.id === req.params.id);
+        if (!archive) {
+            return res.status(404).json({ error: 'Archive not found' });
+        }
+        res.json(archive);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read archive' });
+    }
+});
+
+// POST create archive: snapshot inventory, then reset current inventory
+app.post('/api/archives', (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: 'Archive name is required' });
+        }
+
+        const inventory = readInventory();
+
+        // Create snapshot
+        const archive = {
+            id: 'ARCH-' + Date.now(),
+            name: name.trim(),
+            createdAt: new Date().toISOString(),
+            items: JSON.parse(JSON.stringify(inventory)) // deep copy
+        };
+
+        // Save archive
+        const archives = readArchives();
+        archives.push(archive);
+        writeArchives(archives);
+
+        // Reset current inventory: keep template fields, clear inspection data
+        const resetInventory = inventory.map(item => ({
+            ...item,
+            quantityPerPhysicalCount: { functioning: '', notFunctioning: '', none: '' },
+            frequencyAsPerDO: null,
+            dateLastCalibrated: null,
+            scheduleDateOfNextCalibration: null,
+            remarks: null
+        }));
+        writeInventory(resetInventory);
+
+        res.status(201).json(archive);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create archive' });
+    }
+});
+
+// DELETE archive
+app.delete('/api/archives/:id', (req, res) => {
+    try {
+        let archives = readArchives();
+        const index = archives.findIndex(a => a.id === req.params.id);
+        if (index === -1) {
+            return res.status(404).json({ error: 'Archive not found' });
+        }
+        archives.splice(index, 1);
+        writeArchives(archives);
+        res.json({ message: 'Archive deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete archive' });
     }
 });
 

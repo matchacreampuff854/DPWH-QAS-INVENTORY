@@ -962,6 +962,7 @@ a.brand-mark.logo-mark {
 .quantity-inputs > div {
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
     gap: 4px;
 }
 
@@ -969,6 +970,8 @@ a.brand-mark.logo-mark {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--muted);
+    min-height: 2.4em;
+    line-height: 1.2;
 }
 
 .quantity-inputs input {
