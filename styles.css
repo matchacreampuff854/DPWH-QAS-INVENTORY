@@ -378,6 +378,7 @@ a.brand-mark.logo-mark {
 .theme-toggle:hover {
     transform: scale(1.08);
 }
+.some-class{
     font-family: 'Georgia', serif;
     font-weight: 500;
     padding: 10px 16px;
