@@ -995,6 +995,24 @@ a.brand-mark.logo-mark {
     gap: 10px;
 }
 
+.edit-input-group {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.edit-input-group input,
+.edit-input-group textarea {
+    flex: 1;
+}
+
+.btn-clear {
+    padding: 8px 12px;
+    font-size: 1rem;
+    line-height: 1;
+    min-width: 36px;
+}
+
 .category-input-group select,
 .unit-input-group select {
     width: 100%;
@@ -1617,6 +1635,10 @@ a.brand-mark.logo-mark {
         grid-template-columns: 1fr;
     }
 
+    .edit-input-group {
+        flex-direction: column;
+    }
+
     .search-container {
         flex-direction: column;
         align-items: stretch;
@@ -2081,6 +2103,10 @@ tr:hover {
 [data-theme="dark"] .btn-tertiary:hover {
     background: rgba(122, 143, 168, 0.1);
     color: #b8c5d6;
+}
+
+[data-theme="dark"] .btn-clear {
+    border-color: rgba(122, 143, 168, 0.2);
 }
 
 [data-theme="dark"] .btn-secondary {

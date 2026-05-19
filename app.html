@@ -456,7 +456,10 @@
                         </div>
                         <div class="form-group">
                             <label for="edit-item-subcategory">Subcategory</label>
-                            <input type="text" id="edit-item-subcategory" placeholder="e.g. Soil Analysis, Mix Design">
+                            <div class="edit-input-group">
+                                <input type="text" id="edit-item-subcategory" placeholder="e.g. Soil Analysis, Mix Design">
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-item-subcategory').value=''" title="Clear subcategory">×</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="edit-item-unit">Unit of Measure</label>
@@ -472,19 +475,31 @@
                         </div>
                         <div class="form-group">
                             <label for="edit-frequency-do">Frequency as per D.O. 184 S 2022</label>
-                            <input type="text" id="edit-frequency-do" placeholder="e.g. Same">
+                            <div class="edit-input-group">
+                                <input type="text" id="edit-frequency-do" placeholder="e.g. Same">
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-frequency-do').value=''" title="Clear frequency">×</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="edit-date-last-calibrated">Date Last Calibrated</label>
-                            <input type="date" id="edit-date-last-calibrated">
+                            <div class="edit-input-group">
+                                <input type="date" id="edit-date-last-calibrated">
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-date-last-calibrated').value=''" title="Clear date">×</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="edit-schedule-next-calibration">Schedule Date of Next Calibration</label>
-                            <input type="date" id="edit-schedule-next-calibration">
+                            <div class="edit-input-group">
+                                <input type="date" id="edit-schedule-next-calibration">
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-schedule-next-calibration').value=''" title="Clear date">×</button>
+                            </div>
                         </div>
                         <div class="form-group full-width">
                             <label for="edit-remarks">Remarks/Comments</label>
-                            <textarea id="edit-remarks" placeholder="Add any remarks or comments about this material..." rows="3"></textarea>
+                            <div class="edit-input-group">
+                                <textarea id="edit-remarks" placeholder="Add any remarks or comments about this material..." rows="3"></textarea>
+                                <button type="button" class="btn btn-tertiary btn-clear" onclick="document.getElementById('edit-remarks').value=''" title="Clear remarks">×</button>
+                            </div>
                         </div>
                         <div class="modal-actions full-width">
                             <button type="button" class="btn btn-tertiary" onclick="closeEditModal()">Cancel</button>
