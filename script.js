@@ -68,7 +68,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         addMaterial();
     });
 
-    document.getElementById('search-btn').addEventListener('click', searchInventory);
+    document.getElementById('search-btn').addEventListener('click', function() {
+        switchTab('materials');
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        const matTab = document.querySelector('.nav-tab[data-tab="materials"]');
+        if (matTab) matTab.classList.add('active');
+        searchInventory();
+    });
+    document.getElementById('search-bar').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            switchTab('materials');
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            const matTab = document.querySelector('.nav-tab[data-tab="materials"]');
+            if (matTab) matTab.classList.add('active');
+            searchInventory();
+        }
+    });
     document.getElementById('search-bar').addEventListener('input', function() {
         if (this.value === '') {
             loadInventory();
@@ -451,6 +466,26 @@ function getNextCalibration(item) {
     return item.scheduleDateOfNextCalibration || item.calibrationSchedule || null;
 }
 
+function formatTimeAgo(isoString) {
+    if (!isoString) return 'just now';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 10) return 'just now';
+    if (diffSec < 60) return diffSec + 's ago';
+    if (diffMin < 60) return diffMin + 'm ago';
+    if (diffHour < 24) return diffHour + 'h ago';
+    if (diffDay < 7) return diffDay + 'd ago';
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+        ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
 function getFrequency(item) {
     return item.frequencyAsPerDO || 'N/A';
 }
@@ -478,7 +513,7 @@ function loadInventory() {
         const nextCal = getNextCalibration(item) || 'N/A';
         row.innerHTML = `
             <td>${item.name}</td>
-            <td>${item.category}</td>
+            <td>${item.category}${item.subcategory ? ' — ' + item.subcategory : ''}</td>
             <td>${item.unit || 'N/A'}</td>
             <td>${qty}</td>
             <td>${freq}</td>
@@ -494,6 +529,7 @@ function loadInventory() {
 async function addMaterial() {
     const name = document.getElementById('item-name').value.trim();
     const category = document.getElementById('item-category').value;
+    const subcategory = document.getElementById('item-subcategory').value.trim();
     const unit = document.getElementById('item-unit').value;
     const quantityPerPhysicalCount = document.getElementById('item-quantity').value;
     const frequencyAsPerDO = document.getElementById('frequency-do').value.trim();
@@ -506,13 +542,20 @@ async function addMaterial() {
         return;
     }
 
+    // Check for duplicate name (case-insensitive)
+    const existing = getInventory().find(item => item.name.trim().toLowerCase() === name.toLowerCase());
+    if (existing) {
+        alert(`"${existing.name}" already exists in the inventory.\n\nCategory: ${existing.category}\nPlease use a different name or edit the existing item.`);
+        return;
+    }
+
     const id = 'EQ-' + Date.now();
 
     try {
         const res = await fetch(`${API_BASE}/inventory`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            body: JSON.stringify({ id, name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -580,10 +623,10 @@ function updateRecentActivity() {
     recentItems.forEach(item => {
         const listItem = document.createElement('li');
         listItem.className = 'activity-item';
-        const minutesAgo = 10 + Math.floor(Math.random() * 50);
+        const timeText = formatTimeAgo(item.createdAt);
         listItem.innerHTML = `
             <span><strong>${item.name}</strong> added to inventory.</span>
-            <span>${minutesAgo}m ago</span>
+            <span>${timeText}</span>
         `;
         activityList.appendChild(listItem);
     });
@@ -657,7 +700,7 @@ function updateCharts() {
                 maintainAspectRatio: false,
                 cutout: '60%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                    legend: { position: 'bottom', labels: { padding: 8, usePointStyle: true, boxWidth: 8, font: { size: 11 } } }
                 }
             }
         });
@@ -700,7 +743,10 @@ function updateCharts() {
                         grid: { color: 'rgba(15, 79, 168, 0.08)' }
                     },
                     x: {
-                        ticks: { color: '#64748b', maxRotation: 30, font: { size: 10 } },
+                        ticks: { color: '#64748b', maxRotation: 0, minRotation: 0, font: { size: 9 }, callback: function(value) {
+                            const label = this.getLabelForValue(value);
+                            return label.length > 18 ? label.substring(0, 18) + '...' : label;
+                        } },
                         grid: { display: false }
                     }
                 }
@@ -761,7 +807,10 @@ function updateCharts() {
                         grid: { color: 'rgba(15, 79, 168, 0.08)' }
                     },
                     x: {
-                        ticks: { color: '#64748b', font: { size: 10 } },
+                        ticks: { color: '#64748b', maxRotation: 0, minRotation: 0, font: { size: 9 }, callback: function(value) {
+                            const label = this.getLabelForValue(value);
+                            return label.length > 18 ? label.substring(0, 18) + '...' : label;
+                        } },
                         grid: { display: false }
                     }
                 }
@@ -1168,6 +1217,7 @@ function renderRecords() {
         inventory = inventory.filter(item =>
             item.name.toLowerCase().includes(query) ||
             (item.category && item.category.toLowerCase().includes(query)) ||
+            (item.subcategory && item.subcategory.toLowerCase().includes(query)) ||
             (item.unit && item.unit.toLowerCase().includes(query))
         );
     }
@@ -1199,37 +1249,105 @@ function renderRecords() {
         catRow.innerHTML = `<td colspan="9" class="records-cat-cell">${catNum}. ${cat.toUpperCase()}</td>`;
         tbody.appendChild(catRow);
 
-        grouped[cat].forEach((item, idx) => {
-            const row = document.createElement('tr');
-            const qty = getQuantity(item);
-            const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
-            const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
-            const freq = getFrequency(item);
-            const lastCal = getDateLastCalibrated(item);
-            const nextCal = getNextCalibration(item) || 'N/A';
-            const inputDate = item.createdAt
-                ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : 'Unknown date';
-            row.title = `Inputted on: ${inputDate}`;
+        const catItems = grouped[cat];
+        const hasSubcategories = catItems.some(item => item.subcategory);
 
-            row.innerHTML = `
-                <td><span class="item-num">${catNum}.${idx + 1}</span> <strong>${item.name}</strong></td>
-                <td>${item.category}</td>
-                <td>${item.unit || 'N/A'}</td>
-                <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
-                <td>${freq}</td>
-                <td>${lastCal}</td>
-                <td>${nextCal}</td>
-                <td>${item.remarks || ''}</td>
-                <td>
-                    <div class="action-btns">
-                        <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                        <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        if (hasSubcategories) {
+            // Group items by subcategory
+            const bySub = {};
+            catItems.forEach(item => {
+                const sub = item.subcategory || '';
+                if (!bySub[sub]) bySub[sub] = [];
+                bySub[sub].push(item);
+            });
+
+            // Sort: subcategories with names first, empty (no subcategory) last
+            const subKeys = Object.keys(bySub).sort((a, b) => {
+                if (a === '' && b !== '') return 1;
+                if (b === '' && a !== '') return -1;
+                return a.localeCompare(b);
+            });
+
+            let subLetterCode = 65; // 'A'
+            let itemIdx = 1;
+
+            subKeys.forEach(sub => {
+                if (sub) {
+                    // Subcategory letter header row
+                    const subRow = document.createElement('tr');
+                    subRow.className = 'records-sub-header';
+                    subRow.innerHTML = `<td colspan="9" class="records-sub-cell">${String.fromCharCode(subLetterCode)}. ${sub}</td>`;
+                    tbody.appendChild(subRow);
+                    subLetterCode++;
+                }
+
+                bySub[sub].forEach(item => {
+                    const row = document.createElement('tr');
+                    const qty = getQuantity(item);
+                    const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
+                    const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+                    const freq = getFrequency(item);
+                    const lastCal = getDateLastCalibrated(item);
+                    const nextCal = getNextCalibration(item) || 'N/A';
+                    const inputDate = item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : 'Unknown date';
+                    row.title = `Inputted on: ${inputDate}`;
+
+                    row.innerHTML = `
+                        <td><span class="item-num">${catNum}.${itemIdx}</span> <strong>${item.name}</strong></td>
+                        <td>${item.category}</td>
+                        <td>${item.unit || 'N/A'}</td>
+                        <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+                        <td>${freq}</td>
+                        <td>${lastCal}</td>
+                        <td>${nextCal}</td>
+                        <td>${item.remarks || ''}</td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                    itemIdx++;
+                });
+            });
+        } else {
+            // No subcategories — render as before
+            catItems.forEach((item, idx) => {
+                const row = document.createElement('tr');
+                const qty = getQuantity(item);
+                const badgeClass = qty === 'functioning' ? 'functioning' : (qty === 'not-functioning' ? 'not-functioning' : '');
+                const qtyText = qty === 'functioning' ? 'Functioning' : (qty === 'not-functioning' ? 'Not Functioning' : 'None');
+                const freq = getFrequency(item);
+                const lastCal = getDateLastCalibrated(item);
+                const nextCal = getNextCalibration(item) || 'N/A';
+                const inputDate = item.createdAt
+                    ? new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'Unknown date';
+                row.title = `Inputted on: ${inputDate}`;
+
+                row.innerHTML = `
+                    <td><span class="item-num">${catNum}.${idx + 1}</span> <strong>${item.name}</strong></td>
+                    <td>${item.category}</td>
+                    <td>${item.unit || 'N/A'}</td>
+                    <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
+                    <td>${freq}</td>
+                    <td>${lastCal}</td>
+                    <td>${nextCal}</td>
+                    <td>${item.remarks || ''}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                            <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
         catNum++;
     });
 }
@@ -1241,6 +1359,7 @@ function openEditModal(id) {
 
     document.getElementById('edit-original-id').value = item.id;
     document.getElementById('edit-item-name').value = item.name;
+    document.getElementById('edit-item-subcategory').value = item.subcategory || '';
     document.getElementById('edit-item-quantity').value = getQuantity(item);
     document.getElementById('edit-frequency-do').value = item.frequencyAsPerDO || '';
     document.getElementById('edit-date-last-calibrated').value = item.dateLastCalibrated || '';
@@ -1278,6 +1397,7 @@ async function saveEdit() {
     const originalId = document.getElementById('edit-original-id').value;
     const name = document.getElementById('edit-item-name').value.trim();
     const category = document.getElementById('edit-item-category').value;
+    const subcategory = document.getElementById('edit-item-subcategory').value.trim();
     const unit = document.getElementById('edit-item-unit').value;
     const quantityPerPhysicalCount = document.getElementById('edit-item-quantity').value;
     const frequencyAsPerDO = document.getElementById('edit-frequency-do').value.trim();
@@ -1294,7 +1414,7 @@ async function saveEdit() {
         const res = await fetch(`${API_BASE}/inventory/${originalId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: originalId, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            body: JSON.stringify({ id: originalId, name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -1349,6 +1469,7 @@ function printRecords() {
             item.id.toLowerCase().includes(query) ||
             item.name.toLowerCase().includes(query) ||
             (item.category && item.category.toLowerCase().includes(query)) ||
+            (item.subcategory && item.subcategory.toLowerCase().includes(query)) ||
             (item.unit && item.unit.toLowerCase().includes(query))
         );
     }
@@ -1405,31 +1526,87 @@ function buildPrintHTML(inventory, orientation, colorMode) {
             grouped[cat].push(item);
         });
 
+        let catNum = 1;
         Object.keys(grouped).sort().forEach(cat => {
-            rowsHTML += `<tr><td colspan="9" class="category-header">${cat.toUpperCase()}</td></tr>`;
-            grouped[cat].forEach((item, idx) => {
-                const qty = getQuantity(item);
-                const functioning = qty === 'functioning' ? (item.unit || '1') : '';
-                const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
-                const noneVal = qty === 'none' ? (item.unit || '1') : '';
-                const freq = item.frequencyAsPerDO || '';
-                const lastCal = item.dateLastCalibrated || '';
-                const nextCal = getNextCalibration(item) || '';
+            rowsHTML += `<tr><td colspan="9" class="category-header">${catNum}. ${cat.toUpperCase()}</td></tr>`;
 
-                rowsHTML += `
-                    <tr>
-                        <td>${idx + 1}. ${escapeHtml(item.name)}</td>
-                        <td>${escapeHtml(item.unit || '')}</td>
-                        <td>${escapeHtml(functioning)}</td>
-                        <td>${escapeHtml(notFunctioning)}</td>
-                        <td>${escapeHtml(noneVal)}</td>
-                        <td>${escapeHtml(freq)}</td>
-                        <td class="date-cell">${escapeHtml(lastCal)}</td>
-                        <td class="date-cell">${escapeHtml(nextCal)}</td>
-                        <td>${escapeHtml(item.remarks || '')}</td>
-                    </tr>
-                `;
-            });
+            const catItems = grouped[cat];
+            const hasSubcategories = catItems.some(item => item.subcategory);
+
+            if (hasSubcategories) {
+                const bySub = {};
+                catItems.forEach(item => {
+                    const sub = item.subcategory || '';
+                    if (!bySub[sub]) bySub[sub] = [];
+                    bySub[sub].push(item);
+                });
+
+                const subKeys = Object.keys(bySub).sort((a, b) => {
+                    if (a === '' && b !== '') return 1;
+                    if (b === '' && a !== '') return -1;
+                    return a.localeCompare(b);
+                });
+
+                let subLetterCode = 65; // 'A'
+                let itemIdx = 1;
+
+                subKeys.forEach(sub => {
+                    if (sub) {
+                        rowsHTML += `<tr><td colspan="9" class="subcategory-header">${String.fromCharCode(subLetterCode)}. ${escapeHtml(sub)}</td></tr>`;
+                        subLetterCode++;
+                    }
+
+                    bySub[sub].forEach(item => {
+                        const qty = getQuantity(item);
+                        const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                        const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                        const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                        const freq = item.frequencyAsPerDO || '';
+                        const lastCal = item.dateLastCalibrated || '';
+                        const nextCal = getNextCalibration(item) || '';
+
+                        rowsHTML += `
+                            <tr>
+                                <td>${itemIdx}. ${escapeHtml(item.name)}</td>
+                                <td>${escapeHtml(item.unit || '')}</td>
+                                <td>${escapeHtml(functioning)}</td>
+                                <td>${escapeHtml(notFunctioning)}</td>
+                                <td>${escapeHtml(noneVal)}</td>
+                                <td>${escapeHtml(freq)}</td>
+                                <td class="date-cell">${escapeHtml(lastCal)}</td>
+                                <td class="date-cell">${escapeHtml(nextCal)}</td>
+                                <td>${escapeHtml(item.remarks || '')}</td>
+                            </tr>
+                        `;
+                        itemIdx++;
+                    });
+                });
+            } else {
+                catItems.forEach((item, idx) => {
+                    const qty = getQuantity(item);
+                    const functioning = qty === 'functioning' ? (item.unit || '1') : '';
+                    const notFunctioning = qty === 'not-functioning' ? (item.unit || '1') : '';
+                    const noneVal = qty === 'none' ? (item.unit || '1') : '';
+                    const freq = item.frequencyAsPerDO || '';
+                    const lastCal = item.dateLastCalibrated || '';
+                    const nextCal = getNextCalibration(item) || '';
+
+                    rowsHTML += `
+                        <tr>
+                            <td>${idx + 1}. ${escapeHtml(item.name)}</td>
+                            <td>${escapeHtml(item.unit || '')}</td>
+                            <td>${escapeHtml(functioning)}</td>
+                            <td>${escapeHtml(notFunctioning)}</td>
+                            <td>${escapeHtml(noneVal)}</td>
+                            <td>${escapeHtml(freq)}</td>
+                            <td class="date-cell">${escapeHtml(lastCal)}</td>
+                            <td class="date-cell">${escapeHtml(nextCal)}</td>
+                            <td>${escapeHtml(item.remarks || '')}</td>
+                        </tr>
+                    `;
+                });
+            }
+            catNum++;
         });
     }
 
@@ -1446,6 +1623,7 @@ body { font-family: Georgia, serif; font-size: 8pt; margin: 0; padding: 0; backg
 .print-checklist tbody td { border: 0.8px solid #000; padding: 2px 3px; vertical-align: middle; text-align: center; word-wrap: break-word; overflow-wrap: break-word; word-break: break-all; }
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; word-break: break-word; }
 .print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 2px 4px; border: 0.8px solid #000; font-size: 7pt; }
+.print-checklist .subcategory-header { background: ${isBW ? '#bbb' : '#dbeafe'} !important; color: ${isBW ? '#000' : '#1e3a5f'} !important; font-weight: 600; text-align: left; padding: 2px 4px 2px 12px; border: 0.8px solid #000; font-size: 6.5pt; text-transform: uppercase; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 18%; }
 .print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
 .print-checklist thead tr:first-child th:nth-child(3) { width: 20%; }
@@ -1468,6 +1646,7 @@ body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; back
 .print-checklist tbody td { border: 1px solid #000; padding: 4px 5px; vertical-align: middle; text-align: center; word-wrap: break-word; }
 .print-checklist tbody td:first-child { text-align: left; font-weight: 600; }
 .print-checklist .category-header { background: ${isBW ? '#555' : '#0f4fa8'} !important; color: #fff !important; font-weight: 700; text-align: left; padding: 5px 6px; border: 1px solid #000; font-size: 9pt; }
+.print-checklist .subcategory-header { background: ${isBW ? '#bbb' : '#dbeafe'} !important; color: ${isBW ? '#000' : '#1e3a5f'} !important; font-weight: 600; text-align: left; padding: 4px 6px 4px 14px; border: 1px solid #000; font-size: 8.5pt; text-transform: uppercase; }
 .print-checklist thead tr:first-child th:nth-child(1) { width: 22%; }
 .print-checklist thead tr:first-child th:nth-child(2) { width: 7%; }
 .print-checklist thead tr:first-child th:nth-child(3) { width: 21%; }
@@ -1825,7 +2004,8 @@ function searchInventory() {
     const inventory = getInventory();
     const filteredInventory = inventory.filter(item =>
         item.name.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
+        item.category.toLowerCase().includes(query) ||
+        (item.subcategory && item.subcategory.toLowerCase().includes(query))
     );
 
     const tbody = document.getElementById('inventory-body');
@@ -1844,7 +2024,7 @@ function searchInventory() {
         const nextCal = getNextCalibration(item) || 'N/A';
         row.innerHTML = `
             <td>${item.name}</td>
-            <td>${item.category}</td>
+            <td>${item.category}${item.subcategory ? ' — ' + item.subcategory : ''}</td>
             <td>${item.unit || 'N/A'}</td>
             <td>${qty}</td>
             <td>${freq}</td>

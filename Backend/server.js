@@ -64,7 +64,7 @@ app.get('/api/inventory/search', (req, res) => {
 // POST add new inventory item
 app.post('/api/inventory', (req, res) => {
     try {
-        const { id, name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
+        const { id, name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
         if (!id || !name || !category || !unit || !quantityPerPhysicalCount) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -76,10 +76,16 @@ app.post('/api/inventory', (req, res) => {
             return res.status(409).json({ error: 'Item ID already exists' });
         }
 
+        const duplicateName = inventory.find(item => item.name && item.name.trim().toLowerCase() === name.trim().toLowerCase());
+        if (duplicateName) {
+            return res.status(409).json({ error: `An item named "${duplicateName.name}" already exists in the inventory.` });
+        }
+
         const newItem = {
             id,
             name,
             category,
+            subcategory: subcategory || null,
             unit,
             quantityPerPhysicalCount,
             frequencyAsPerDO: frequencyAsPerDO || null,
@@ -101,7 +107,7 @@ app.post('/api/inventory', (req, res) => {
 app.put('/api/inventory/:id', (req, res) => {
     try {
         const { id } = req.params;
-        const { name, category, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
+        const { name, category, subcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
         if (!name || !category || !unit || !quantityPerPhysicalCount) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -117,6 +123,7 @@ app.put('/api/inventory/:id', (req, res) => {
             ...inventory[index],
             name,
             category,
+            subcategory: subcategory || null,
             unit,
             quantityPerPhysicalCount,
             frequencyAsPerDO: frequencyAsPerDO || null,

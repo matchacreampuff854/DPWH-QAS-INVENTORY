@@ -48,8 +48,8 @@ body {
 .page-shell {
     width: 98%;
     max-width: 1600px;
-    margin: 8px auto;
-    padding: 10px;
+    margin: 6px auto;
+    padding: 8px;
     background: rgba(255, 255, 255, 0.94);
     border-radius: 24px;
     box-shadow: 0 30px 80px rgba(15, 79, 168, 0.16);
@@ -217,15 +217,15 @@ body {
 
 .topbar {
     width: 100%;
-    padding: 14px 20px;
+    padding: 10px 16px;
     display: grid;
     grid-template-columns: 1.5fr 1fr auto;
     align-items: center;
-    gap: 14px;
-    border-radius: 18px;
+    gap: 10px;
+    border-radius: 14px;
     background: #ffffff;
     box-shadow: 0 20px 60px rgba(15, 79, 168, 0.08);
-    margin-bottom: 32px;
+    margin-bottom: 8px;
 }
 
 .brand {
@@ -256,9 +256,9 @@ body {
 }
 
 .brand-mark.logo-mark {
-    width: 72px;
-    height: 72px;
-    padding: 6px;
+    width: 52px;
+    height: 52px;
+    padding: 4px;
     background: transparent;
     box-shadow: none;
 }
@@ -279,13 +279,13 @@ a.brand-mark.logo-mark {
 }
 
 .brand-copy h1 {
-    font-size: 1.75rem;
-    margin-bottom: 6px;
+    font-size: 1.5rem;
+    margin-bottom: 2px;
 }
 
 .brand-copy p {
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 }
 
 .nav-links {
@@ -732,54 +732,54 @@ a.brand-mark.logo-mark {
 
 .dashboard {
     display: grid;
-    gap: 28px;
+    gap: 10px;
 }
 
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
 }
 
 .metric-card {
     background: #ffffff;
-    border-radius: 16px;
-    padding: 14px 18px;
+    border-radius: 10px;
+    padding: 8px 10px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(15, 79, 168, 0.08);
 }
 
 .metric-card strong {
     display: block;
-    font-size: 1.6rem;
-    margin-top: 6px;
+    font-size: 1.35rem;
+    margin-top: 4px;
     color: var(--blue);
 }
 
 .metric-title {
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     letter-spacing: 0.02em;
 }
 
 .metric-card p {
-    margin-top: 4px;
+    margin-top: 2px;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 10px;
     align-items: start;
-    grid-auto-rows: minmax(280px, auto);
+    grid-auto-rows: 210px;
 }
 
 .card {
     background: var(--surface);
-    border-radius: 24px;
-    padding: 26px;
+    border-radius: 12px;
+    padding: 10px;
     box-shadow: var(--shadow);
     border: 1px solid rgba(15, 79, 168, 0.08);
     min-width: 0;
@@ -789,20 +789,20 @@ a.brand-mark.logo-mark {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 22px;
+    margin-bottom: 6px;
 }
 
 .card-header h2 {
-    font-size: 1.2rem;
+    font-size: 1rem;
     margin: 0;
 }
 
 .chart-card {
-    min-height: 280px;
+    height: 210px;
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 8px;
 }
 
 .card-header {
@@ -812,8 +812,8 @@ a.brand-mark.logo-mark {
 .chart-wrapper {
     flex: 1;
     position: relative;
-    min-height: 420px;
-    padding-bottom: 40px;
+    min-height: 0;
+    padding-bottom: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1256,9 +1256,29 @@ a.brand-mark.logo-mark {
     background: #0f4fa8 !important;
 }
 
+.records-sub-header {
+    background: #dbeafe !important;
+}
+
+.records-sub-header .records-sub-cell {
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: #1e3a5f;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 8px 16px 8px 32px;
+    border-bottom: none;
+    background: #dbeafe !important;
+}
+
 .records-table tbody tr.records-cat-header:hover,
 .records-table tbody tr.records-cat-header:hover td {
     background: #0f4fa8 !important;
+}
+
+.records-table tbody tr.records-sub-header:hover,
+.records-table tbody tr.records-sub-header:hover td {
+    background: #dbeafe !important;
 }
 
 .records-table .item-num {
@@ -1536,7 +1556,7 @@ a.brand-mark.logo-mark {
     }
 
     .brand-copy h1 {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
     }
 
     .metric-card,
@@ -1566,26 +1586,26 @@ a.brand-mark.logo-mark {
     }
 
     .brand-copy h1 {
-        font-size: 1.45rem;
+        font-size: 1.3rem;
     }
 
     .metric-card {
-        padding: 12px 14px;
+        padding: 8px 10px;
     }
 
     .card,
     .inventory-panel,
     .activity-panel {
-        padding: 14px;
+        padding: 10px;
     }
 
     .chart-card {
-        min-height: 260px;
+        min-height: 180px;
     }
 
     .chart-wrapper {
-        min-height: 180px;
-        padding-bottom: 10px;
+        min-height: 120px;
+        padding-bottom: 4px;
     }
 
     .form-grid {
@@ -1625,7 +1645,7 @@ a.brand-mark.logo-mark {
     }
 
     .brand-copy h1 {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1648,22 +1668,22 @@ a.brand-mark.logo-mark {
     }
 
     .metric-card strong {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
     }
 
     .card,
     .inventory-panel,
     .activity-panel {
-        padding: 12px;
+        padding: 8px;
     }
 
     .chart-card {
-        min-height: 240px;
+        min-height: 170px;
     }
 
     .chart-wrapper {
-        min-height: 160px;
-        padding-bottom: 8px;
+        min-height: 110px;
+        padding-bottom: 4px;
     }
 
     .activity-item {
@@ -1690,7 +1710,7 @@ a.brand-mark.logo-mark {
     }
 
     .brand-copy h1 {
-        font-size: 1.15rem;
+        font-size: 1.1rem;
     }
 
     .btn,
@@ -1706,12 +1726,12 @@ a.brand-mark.logo-mark {
     }
 
     .chart-card {
-        min-height: 220px;
+        min-height: 160px;
     }
 
     .chart-wrapper {
-        min-height: 140px;
-        padding-bottom: 8px;
+        min-height: 100px;
+        padding-bottom: 4px;
     }
 
     .form-grid {
@@ -1881,6 +1901,20 @@ tr:hover {
 
 [data-theme="dark"] .records-cat-cell {
     color: #c9d6e6 !important;
+}
+
+[data-theme="dark"] .records-sub-header {
+    background: #1a2744 !important;
+}
+
+[data-theme="dark"] .records-sub-cell {
+    color: #8ab4f8 !important;
+    background: #1a2744 !important;
+}
+
+[data-theme="dark"] .records-table tbody tr.records-sub-header:hover,
+[data-theme="dark"] .records-table tbody tr.records-sub-header:hover td {
+    background: #1a2744 !important;
 }
 
 [data-theme="dark"] .item-num {

@@ -68,6 +68,11 @@
         </div>
 
         <main class="dashboard">
+            <div id="search-container" class="search-container">
+                <input type="text" id="search-bar" placeholder="Search by item, category, or ID">
+                <button id="search-btn" class="btn btn-secondary">Search</button>
+            </div>
+
             <section class="metrics-grid">
                 <article class="metric-card">
                     <div>
@@ -142,14 +147,8 @@
                     <div class="card-header">
                         <div>
                             <h2>Inventory Management</h2>
-                            <p>Search, add, and review material inventory details.</p>
+                            <p>Add, and review material inventory details.</p>
                         </div>
-                        <div class="small-status">Live dashboard</div>
-                    </div>
-
-                    <div id="search-container" class="search-container">
-                        <input type="text" id="search-bar" placeholder="Search by item, category, or ID">
-                        <button id="search-btn" class="btn btn-secondary">Search</button>
                     </div>
 
                     <div id="add-material" class="card surface-card">
@@ -171,6 +170,10 @@
                                     <button type="button" id="add-category-btn" class="btn btn-secondary btn-add-category" title="Add new category">+</button>
                                     <button type="button" id="remove-category-btn" class="btn btn-danger btn-remove-category" title="Remove selected category">−</button>
                                 </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="item-subcategory">Subcategory</label>
+                                <input type="text" id="item-subcategory" placeholder="e.g. Soil Analysis, Mix Design">
                             </div>
                             <div class="form-group">
                                 <label for="item-unit">Unit of Measure</label>
@@ -450,6 +453,10 @@
                         <div class="form-group">
                             <label for="edit-item-category">Category</label>
                             <select id="edit-item-category" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-item-subcategory">Subcategory</label>
+                            <input type="text" id="edit-item-subcategory" placeholder="e.g. Soil Analysis, Mix Design">
                         </div>
                         <div class="form-group">
                             <label for="edit-item-unit">Unit of Measure</label>
