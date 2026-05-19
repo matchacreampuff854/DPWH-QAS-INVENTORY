@@ -155,10 +155,6 @@
                         <h3>Add New Material</h3>
                         <form id="add-form" class="form-grid">
                             <div class="form-group">
-                                <label for="item-name">Apparatus/ Equipment</label>
-                                <input type="text" id="item-name" required>
-                            </div>
-                            <div class="form-group">
                                 <label for="item-category">Category</label>
                                 <div class="category-input-group">
                                     <select id="item-category" required>
@@ -180,6 +176,10 @@
                                 <input type="text" id="item-sub-subcategory" placeholder="e.g. Specific Gravity, Compaction Test">
                             </div>
                             <div class="form-group">
+                                <label for="item-name">Apparatus/ Equipment</label>
+                                <input type="text" id="item-name" required>
+                            </div>
+                            <div class="form-group">
                                 <label for="item-unit">Unit of Measure</label>
                                 <div class="unit-input-group">
                                     <select id="item-unit" required>
@@ -198,7 +198,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="item-quantity">Quantity per Physical Count</label>
-                                <select id="item-quantity" required>
+                                <select id="item-quantity">
                                     <option value="" disabled selected hidden>Select</option>
                                     <option value="functioning">Functioning</option>
                                     <option value="not-functioning">Not Functioning</option>
@@ -451,10 +451,6 @@
                     <form id="edit-form" class="form-grid">
                         <input type="hidden" id="edit-original-id">
                         <div class="form-group">
-                            <label for="edit-item-name">Apparatus/ Equipment</label>
-                            <input type="text" id="edit-item-name" required>
-                        </div>
-                        <div class="form-group">
                             <label for="edit-item-category">Category</label>
                             <select id="edit-item-category" required></select>
                         </div>
@@ -473,12 +469,17 @@
                             </div>
                         </div>
                         <div class="form-group">
+                            <label for="edit-item-name">Apparatus/ Equipment</label>
+                            <input type="text" id="edit-item-name" required>
+                        </div>
+                        <div class="form-group">
                             <label for="edit-item-unit">Unit of Measure</label>
-                            <select id="edit-item-unit" required></select>
+                            <select id="edit-item-unit"></select>
                         </div>
                         <div class="form-group">
                             <label for="edit-item-quantity">Quantity per Physical Count</label>
-                            <select id="edit-item-quantity" required>
+                            <select id="edit-item-quantity">
+                                <option value="">Select</option>
                                 <option value="functioning">Functioning</option>
                                 <option value="not-functioning">Not Functioning</option>
                                 <option value="none">None</option>
@@ -523,6 +524,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=10"></script>
 </body>
 </html>

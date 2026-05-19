@@ -570,8 +570,8 @@ async function addMaterial() {
     const scheduleDateOfNextCalibration = document.getElementById('schedule-next-calibration').value;
     const remarks = document.getElementById('remarks').value.trim();
 
-    if (!name || !category || !unit || !quantityPerPhysicalCount) {
-        alert('Please fill in all required fields');
+    if (!name || !category) {
+        alert('Please fill in all required fields (Name, Category)');
         return;
     }
 
@@ -1250,8 +1250,10 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
         : 'Unknown date';
     row.title = `Inputted on: ${inputDate}`;
 
+    const numLabel = itemIdx !== '' ? `${subSubNum}.${itemIdx}` : `${subSubNum}`;
+
     row.innerHTML = `
-        <td><span class="item-num">${subSubNum}.${itemIdx}</span> <strong>${item.name}</strong></td>
+        <td><span class="item-num">${numLabel}</span> <strong>${item.name}</strong></td>
         <td>${item.category}</td>
         <td>${item.unit || 'N/A'}</td>
         <td><span class="status-badge ${badgeClass}">${qtyText}</span></td>
@@ -1440,9 +1442,13 @@ function renderRecords() {
 
         if (catSubs.length > 0) {
             let subLetterCode = 65; // 'A'
+            let lastSubSubNum = 0;
+            let lastItemIdx = 1;
 
             catSubs.forEach(sub => {
                 const subItems = catItems.filter(item => item.subcategory === sub.name);
+                const subSubNum = subLetterCode - 64; // A=1, B=2, C=3...
+                lastSubSubNum = subSubNum;
                 const escName = String(sub.name).replace(/'/g, '\\\'');
                 const escCat = String(sub.category).replace(/'/g, '\\\'');
 
@@ -1468,16 +1474,16 @@ function renderRecords() {
                     .filter(ss => ss.subcategory === sub.name && ss.category === cat)
                     .sort((a, b) => a.name.localeCompare(b.name));
 
-                if (subSubcats.length > 0) {
-                    let subSubNum = 1;
+                let itemIdx = 1; // Running counter for ALL items under this subcategory
 
+                if (subSubcats.length > 0) {
                     subSubcats.forEach(ss => {
                         const ssItems = subItems.filter(item => item.subSubcategory === ss.name);
                         const escSsName = String(ss.name).replace(/'/g, '\\\'');
                         const escSsSub = String(ss.subcategory).replace(/'/g, '\\\'');
                         const escSsCat = String(ss.category).replace(/'/g, '\\\'');
 
-                        // Sub-subcategory header row (1, 2, 3...)
+                        // Sub-subcategory header row (1, 2, 3... matches subcategory letter position)
                         const ssRow = document.createElement('tr');
                         ssRow.className = 'records-subsub-header';
                         ssRow.innerHTML = `
@@ -1493,49 +1499,48 @@ function renderRecords() {
                         `;
                         tbody.appendChild(ssRow);
 
-                        // Items under this sub-subcategory (1.1, 1.2, 1.3...)
-                        let itemIdx = 1;
+                        // Items under this sub-subcategory (1.1, 1.2 / 2.1, 2.2 / 3.1, 3.2...)
                         ssItems.forEach(item => {
                             renderRecordItemRow(tbody, item, subSubNum, itemIdx);
                             itemIdx++;
                         });
-
-                        subSubNum++;
                     });
 
-                    // Items with no sub-subcategory under this subcategory
+                    // Items with no sub-subcategory under this subcategory — continue numbering
                     const noSsItems = subItems.filter(item => !item.subSubcategory);
                     if (noSsItems.length > 0) {
-                        let itemIdx = 1;
                         noSsItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, '-', itemIdx);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
                             itemIdx++;
                         });
                     }
                 } else {
-                    // No registered sub-subcategories — list items directly under subcategory
-                    let itemIdx = 1;
-                    subItems.forEach(item => {
-                        renderRecordItemRow(tbody, item, '-', itemIdx);
-                        itemIdx++;
-                    });
+                    // No registered sub-subcategories — items numbered with subSubNum prefix
+                    if (subItems.length > 0) {
+                        subItems.forEach(item => {
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
+                            itemIdx++;
+                        });
+                    }
                 }
+
+                lastItemIdx = itemIdx;
             });
 
-            // Items with no subcategory at all
+            // Items with no subcategory at all — continue from last subcategory number
             const noSubItems = catItems.filter(item => !item.subcategory);
             if (noSubItems.length > 0) {
-                let itemIdx = 1;
+                let itemIdx = lastItemIdx;
                 noSubItems.forEach(item => {
-                    renderRecordItemRow(tbody, item, '-', itemIdx);
+                    renderRecordItemRow(tbody, item, lastSubSubNum, itemIdx);
                     itemIdx++;
                 });
             }
         } else {
-            // No registered subcategories — just list items
+            // No registered subcategories — just list items with plain numbers
             let itemIdx = 1;
             catItems.forEach(item => {
-                renderRecordItemRow(tbody, item, '-', itemIdx);
+                renderRecordItemRow(tbody, item, itemIdx, '');
                 itemIdx++;
             });
         }
@@ -1597,8 +1602,8 @@ async function saveEdit() {
     const scheduleDateOfNextCalibration = document.getElementById('edit-schedule-next-calibration').value;
     const remarks = document.getElementById('edit-remarks').value.trim();
 
-    if (!name || !category || !unit || !quantityPerPhysicalCount) {
-        alert('Please fill in all required fields');
+    if (!name || !category) {
+        alert('Please fill in all required fields (Name, Category)');
         return;
     }
 

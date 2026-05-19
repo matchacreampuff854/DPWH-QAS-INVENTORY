@@ -110,7 +110,7 @@ app.post('/api/inventory', (req, res) => {
     try {
         const { id, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
-        if (!id || !name || !category || !unit || !quantityPerPhysicalCount) {
+        if (!id || !name || !category) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
@@ -154,7 +154,7 @@ app.put('/api/inventory/:id', (req, res) => {
         const { id } = req.params;
         const { name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks } = req.body;
 
-        if (!name || !category || !unit || !quantityPerPhysicalCount) {
+        if (!name || !category) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
