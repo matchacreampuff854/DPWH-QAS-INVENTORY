@@ -19,6 +19,8 @@ let subsubcategoriesCache = [];
 let archivesCache = [];
 let archiveViewCache = null; // full archive object when viewing an archive
 let currentArea = 'current'; // 'current' or archive ID
+let dashboardArea = 'current'; // 'current' or archive ID for dashboard view
+let dashboardAreaCache = null; // full archive object when dashboard views an archive
 let pendingConfirmAction = null;
 let autoRefreshInterval = null;
 const AUTO_REFRESH_MS = 5000; // Poll every 5 seconds
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await syncSubsubcategories();
     await syncInventory();
     await syncArchives();
+    await syncTrash();
     startAutoRefresh();
 
     // Instant sync when user returns to this browser tab
@@ -77,6 +80,34 @@ document.addEventListener('DOMContentLoaded', async function() {
         e.preventDefault();
         addMaterial();
     });
+
+    // Dashboard area filter (shows Current + saved archives)
+    const dashboardAreaFilter = document.getElementById('dashboard-area-filter');
+    if (dashboardAreaFilter) {
+        dashboardAreaFilter.addEventListener('change', async function() {
+            dashboardArea = this.value;
+            if (dashboardArea !== 'current') {
+                try {
+                    const res = await fetch(`${API_BASE}/archives/${dashboardArea}`);
+                    if (res.ok) {
+                        dashboardAreaCache = await res.json();
+                    } else {
+                        dashboardAreaCache = null;
+                    }
+                } catch (e) {
+                    dashboardAreaCache = null;
+                }
+            } else {
+                dashboardAreaCache = null;
+            }
+            updateDashboard();
+            updateCharts();
+            updateRecentActivity();
+            checkNotifications();
+            updateCalendarBadge();
+            renderCalendar();
+        });
+    }
 
     document.getElementById('search-btn').addEventListener('click', function() {
         switchTab('materials');
@@ -193,11 +224,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    const yearSelect = document.getElementById('records-year');
-    if (yearSelect) {
-        yearSelect.addEventListener('change', renderRecords);
-    }
-
     const recordsSearch = document.getElementById('records-search');
     if (recordsSearch) {
         recordsSearch.addEventListener('input', renderRecords);
@@ -230,6 +256,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (deleteBtn) deleteBtn.style.display = 'none';
             }
             renderRecords();
+            // If dashboard is visible, refresh it to reflect the selected archive/current data
+            const dashboardSection = document.querySelector('.dashboard');
+            if (dashboardSection && dashboardSection.style.display !== 'none') {
+                updateDashboard();
+                updateCharts();
+                updateRecentActivity();
+                checkNotifications();
+                updateCalendarBadge();
+                renderCalendar();
+            }
         });
     }
 
@@ -620,13 +656,6 @@ async function addMaterial() {
         return;
     }
 
-    // Check for duplicate name (case-insensitive)
-    const existing = getInventory().find(item => item.name.trim().toLowerCase() === name.toLowerCase());
-    if (existing) {
-        alert(`"${existing.name}" already exists in the inventory.\n\nCategory: ${existing.category}\nPlease use a different name or edit the existing item.`);
-        return;
-    }
-
     const id = 'EQ-' + Date.now();
 
     try {
@@ -655,22 +684,48 @@ async function addMaterial() {
 async function deleteMaterial(id) {
     if (confirm('Are you sure you want to delete this material?')) {
         try {
+            console.log('Deleting item:', id);
             const res = await fetch(`${API_BASE}/inventory/${id}`, { method: 'DELETE' });
+            console.log('Delete response status:', res.status);
             if (!res.ok) {
                 const err = await res.json();
                 alert(err.error || 'Failed to delete material. Check that the backend is running.');
                 return;
             }
+            const data = await res.json();
+            console.log('Delete response:', data);
+            // Add deleted item directly to trash cache so it appears immediately
+            if (data.item) {
+                trashCache.push(data.item);
+            }
             await syncInventory();
+            await syncTrash();
+            console.log('Trash after delete:', trashCache);
+            // If trash modal is open, refresh it
+            const trashModal = document.getElementById('trash-modal');
+            if (trashModal && trashModal.style.display === 'flex') {
+                renderTrashList();
+            }
         } catch (error) {
+            console.error('Delete error:', error);
             alert('Failed to delete material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
             showBackendWarning();
         }
     }
 }
 
+function getDashboardData() {
+    const isArchiveView = dashboardArea !== 'current' && dashboardAreaCache;
+    return isArchiveView ? dashboardAreaCache.items : getInventory();
+}
+
+function filterDashboardData(data) {
+    return [...data];
+}
+
 function updateDashboard() {
-    const inventory = getInventory();
+    let inventory = filterDashboardData(getDashboardData());
+
     const total = inventory.length;
     const functioningCount = inventory.filter(item => getQuantityObj(item).functioning !== '').length;
     const notFunctioningCount = inventory.filter(item => getQuantityObj(item).notFunctioning !== '').length;
@@ -689,10 +744,19 @@ function updateDashboard() {
     document.getElementById('functioning-count').textContent = functioningCount;
     document.getElementById('not-functioning-count').textContent = notFunctioningCount;
     document.getElementById('overdue-calibration').textContent = overdueCount;
+
+    const totalLabel = document.getElementById('total-materials-label');
+    if (totalLabel) {
+        if (dashboardArea !== 'current' && dashboardAreaCache) {
+            totalLabel.textContent = dashboardAreaCache.name;
+        } else {
+            totalLabel.textContent = 'Current Inventory';
+        }
+    }
 }
 
 function updateRecentActivity() {
-    const inventory = getInventory();
+    const inventory = getDashboardData();
     const activityList = document.getElementById('recent-activity');
     activityList.innerHTML = '';
 
@@ -715,7 +779,7 @@ function updateRecentActivity() {
 }
 
 function updateCharts() {
-    const inventory = getInventory();
+    let inventory = filterDashboardData(getDashboardData());
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -902,7 +966,7 @@ function updateCharts() {
 }
 
 function checkNotifications() {
-    const inventory = getInventory();
+    const inventory = getDashboardData();
     const notifications = [];
     const today = new Date();
     const warningDays = 30;
@@ -1023,7 +1087,7 @@ async function syncInventory() {
     updateCharts();
     updateRecentActivity();
     checkNotifications();
-    populateYearDropdown();
+    populateCategoryDropdown();
     renderRecords();
     updateCalendarBadge();
     renderCalendar();
@@ -1071,6 +1135,130 @@ async function deleteCurrentArchive() {
         renderRecords();
     } catch (error) {
         alert('Failed to delete archive. Backend is not running.');
+    }
+}
+
+// ── Trash Bin ──
+let trashCache = [];
+
+async function syncTrash() {
+    try {
+        const res = await fetch(`${API_BASE}/trash/fetch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }
+        });
+        if (!res.ok) throw new Error('Failed to fetch trash: ' + res.status);
+        trashCache = await res.json();
+    } catch (error) {
+        console.error('Failed to sync trash', error);
+        trashCache = [];
+    }
+}
+
+async function refreshTrash() {
+    const container = document.getElementById('trash-list');
+    if (container) {
+        container.innerHTML = '<p style="color: var(--muted); text-align:center; padding: 20px;">Loading...</p>';
+    }
+    await syncTrash();
+    renderTrashList();
+}
+
+async function openTrashModal() {
+    const modal = document.getElementById('trash-modal');
+    if (!modal) return;
+    console.log('Opening trash modal...');
+    try {
+        await syncTrash();
+        console.log('Trash loaded, items:', trashCache.length);
+    } catch (e) {
+        console.error('Failed to load trash', e);
+    }
+    renderTrashList();
+    modal.style.display = 'flex';
+    console.log('Trash modal opened');
+}
+
+function closeTrashModal() {
+    const modal = document.getElementById('trash-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderTrashList() {
+    const container = document.getElementById('trash-list');
+    if (!container) return;
+
+    if (!trashCache.length) {
+        container.innerHTML = '<p style="color: var(--muted); text-align:center; padding: 20px;">No deleted items.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'trash-table';
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Deleted</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody');
+
+    trashCache.forEach(item => {
+        const deletedDate = item.deletedAt
+            ? new Date(item.deletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Unknown';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${item.name}</strong></td>
+            <td>${item.category}</td>
+            <td>${deletedDate}</td>
+            <td>
+                <button class="btn btn-primary" onclick="restoreFromTrash('${item.id}')">Restore</button>
+                <button class="btn btn-danger" onclick="permanentlyDeleteFromTrash('${item.id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    container.appendChild(table);
+}
+
+async function restoreFromTrash(id) {
+    try {
+        const res = await fetch(`${API_BASE}/trash/restore/${id}`, { method: 'POST' });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to restore item.');
+            return;
+        }
+        await syncTrash();
+        await syncInventory();
+        renderTrashList();
+        alert('Item restored successfully.');
+    } catch (error) {
+        alert('Failed to restore item. Backend is not running.');
+    }
+}
+
+async function permanentlyDeleteFromTrash(id) {
+    if (!confirm('Permanently delete this item?\n\nThis cannot be undone.')) return;
+    try {
+        const res = await fetch(`${API_BASE}/trash/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to delete item.');
+            return;
+        }
+        await syncTrash();
+        renderTrashList();
+    } catch (error) {
+        alert('Failed to delete item. Backend is not running.');
     }
 }
 
@@ -1175,6 +1363,14 @@ function addCategoryOption(categoryName) {
         option.value = categoryName;
         option.textContent = categoryName;
         editCategorySelect.appendChild(option);
+    }
+
+    const recordsCategorySelect = document.getElementById('records-category-filter');
+    if (recordsCategorySelect) {
+        const option = document.createElement('option');
+        option.value = categoryName;
+        option.textContent = categoryName;
+        recordsCategorySelect.appendChild(option);
     }
 }
 
@@ -1282,6 +1478,7 @@ function startAutoRefresh() {
         await syncSubsubcategories();
         await syncInventory();
         await syncArchives();
+        await syncTrash();
         const newHash = inventoryHash(inventoryCache);
         if (prevHash !== newHash) {
             // Data changed (add, edit, or delete) — re-render whatever is visible
@@ -1331,45 +1528,15 @@ function stopAutoRefresh() {
     }
 }
 
-function populateYearDropdown() {
-    const yearSelect = document.getElementById('records-year');
+function populateCategoryDropdown() {
     const categorySelect = document.getElementById('records-category-filter');
-    if (!yearSelect || !categorySelect) return;
+    if (!categorySelect) return;
 
-    const currentYear = new Date().getFullYear();
     const inventory = getInventory();
-    const years = new Set();
     const cats = new Set(categories);
 
     inventory.forEach(item => {
-        if (item.createdAt) {
-            years.add(new Date(item.createdAt).getFullYear());
-        }
         if (item.category) cats.add(item.category);
-    });
-
-    // Also extract years from archive names (e.g. "2024 Annual Inspection" → 2024)
-    archivesCache.forEach(arch => {
-        if (arch.name) {
-            const match = arch.name.match(/\b(19|20)\d{2}\b/);
-            if (match) years.add(parseInt(match[0]));
-        }
-        if (arch.createdAt) {
-            years.add(new Date(arch.createdAt).getFullYear());
-        }
-    });
-
-    for (let y = currentYear; y >= 2020; y--) {
-        years.add(y);
-    }
-
-    const sortedYears = Array.from(years).sort((a, b) => b - a);
-    yearSelect.innerHTML = '<option value="all">All Years</option>';
-    sortedYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        yearSelect.appendChild(option);
     });
 
     const currentCat = categorySelect.value;
@@ -1383,9 +1550,25 @@ function populateYearDropdown() {
     if (currentCat && Array.from(cats).includes(currentCat)) {
         categorySelect.value = currentCat;
     }
+
+    // Populate dashboard area filter (Current + saved archives)
+    const dashboardAreaFilter = document.getElementById('dashboard-area-filter');
+    if (dashboardAreaFilter) {
+        const currentDashArea = dashboardAreaFilter.value;
+        dashboardAreaFilter.innerHTML = '<option value="current">Current</option>';
+        archivesCache.forEach(arch => {
+            const option = document.createElement('option');
+            option.value = arch.id;
+            option.textContent = arch.name;
+            dashboardAreaFilter.appendChild(option);
+        });
+        if (currentDashArea && (currentDashArea === 'current' || archivesCache.some(a => a.id === currentDashArea))) {
+            dashboardAreaFilter.value = currentDashArea;
+        }
+    }
 }
 
-function renderRecordItemRow(tbody, item, subSubNum, itemIdx, readOnly) {
+function renderRecordItemRow(tbody, item, subSubNum, itemIdx) {
     const row = document.createElement('tr');
     if (itemIdx !== '') row.classList.add('records-item-indented');
     const qtyObj = getQuantityObj(item);
@@ -1399,15 +1582,6 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx, readOnly) {
 
     const numLabel = itemIdx !== '' ? `${subSubNum}.${itemIdx}` : `${subSubNum}`;
 
-    const actions = readOnly ? '' : `
-        <td>
-            <div class="action-btns">
-                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
-                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
-            </div>
-        </td>
-    `;
-
     row.innerHTML = `
         <td><span class="item-num">${numLabel}</span> <strong>${item.name}</strong></td>
         <td>${item.unit || 'N/A'}</td>
@@ -1418,7 +1592,12 @@ function renderRecordItemRow(tbody, item, subSubNum, itemIdx, readOnly) {
         <td>${lastCal}</td>
         <td>${nextCal}</td>
         <td>${item.remarks || ''}</td>
-        ${actions}
+        <td>
+            <div class="action-btns">
+                <button class="action-btn edit" title="Edit" onclick="openEditModal('${item.id}')">✏️</button>
+                <button class="action-btn delete" title="Delete" onclick="deleteFromRecords('${item.id}')">🗑️</button>
+            </div>
+        </td>
     `;
     tbody.appendChild(row);
 }
@@ -1511,7 +1690,6 @@ async function deleteSubsubcategoryPrompt(name, subcategory, category) {
 
 function renderRecords() {
     const tbody = document.getElementById('records-body');
-    const yearSelect = document.getElementById('records-year');
     const searchInput = document.getElementById('records-search');
     const categoryFilter = document.getElementById('records-category-filter');
     const countLabel = document.getElementById('records-count');
@@ -1519,20 +1697,17 @@ function renderRecords() {
     if (!tbody) return;
 
     const isArchiveView = currentArea !== 'current' && archiveViewCache;
-    const selectedYear = yearSelect ? yearSelect.value : 'all';
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
 
     let inventory = isArchiveView ? archiveViewCache.items : getInventory();
 
-    // Year filter (skip for archive view — archives have their own date)
-    if (!isArchiveView && selectedYear !== 'all') {
-        const yearNum = parseInt(selectedYear);
-        inventory = inventory.filter(item => {
-            if (!item.createdAt) return false;
-            return new Date(item.createdAt).getFullYear() === yearNum;
-        });
-    }
+    // Sort by creation time: oldest first so the first added item appears first
+    inventory = inventory.slice().sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return ta - tb;
+    });
 
     // Category filter
     if (selectedCategory !== 'all') {
@@ -1564,11 +1739,21 @@ function renderRecords() {
         grouped[cat].push(item);
     });
 
-    // Determine which categories to show (have items OR registered subcategories OR registered sub-subcategories)
-    const categoriesFromItems = Object.keys(grouped);
+    // Determine which categories to show
+    let categoriesFromItems = Object.keys(grouped);
     const categoriesFromSubs = [...new Set(subcategoriesCache.map(s => s.category))];
     const categoriesFromSubSubs = [...new Set(subsubcategoriesCache.map(s => s.category))];
-    const allCategories = [...new Set([...categoriesFromItems, ...categoriesFromSubs, ...categoriesFromSubSubs])].sort();
+    let allCategories = [...new Set([...categoriesFromItems, ...categoriesFromSubs, ...categoriesFromSubSubs])].sort();
+
+    // When searching, only show categories that have matching items
+    if (query) {
+        allCategories = categoriesFromItems;
+    }
+
+    // When a specific category is selected, only show that category
+    if (selectedCategory !== 'all') {
+        allCategories = allCategories.filter(cat => cat === selectedCategory);
+    }
 
     if (!allCategories.length) {
         tbody.innerHTML = '<tr><td colspan="10" class="no-records">No records found.</td></tr>';
@@ -1588,11 +1773,25 @@ function renderRecords() {
 
         if (catSubs.length > 0) {
             let subLetterCode = 65; // 'A'
+            let ssCounter = 0; // Running counter for sub-subcategories across entire category
             let lastSubSubNum = 0;
             let lastItemIdx = 1;
 
+            // Deduplicate subcategories by name (case-insensitive), keep first occurrence
+            const seenSubNames = new Set();
+            const uniqueCatSubs = [];
             catSubs.forEach(sub => {
-                const subItems = catItems.filter(item => item.subcategory === sub.name);
+                const lower = (sub.name || '').toLowerCase();
+                if (!seenSubNames.has(lower)) {
+                    seenSubNames.add(lower);
+                    uniqueCatSubs.push(sub);
+                }
+            });
+
+            uniqueCatSubs.forEach(sub => {
+                // Include items whose subcategory matches this name case-insensitively
+                const subLower = (sub.name || '').toLowerCase();
+                const subItems = catItems.filter(item => (item.subcategory || '').toLowerCase() === subLower);
                 const subSubNum = subLetterCode - 64; // A=1, B=2, C=3...
                 lastSubSubNum = subSubNum;
                 const escName = String(sub.name).replace(/'/g, '\\\'');
@@ -1625,13 +1824,26 @@ function renderRecords() {
                 let itemIdx = 1; // Running counter for ALL items under this subcategory
 
                 if (subSubcats.length > 0) {
+                    // Deduplicate sub-subcategories by name (case-insensitive), keep first occurrence
+                    const seenSsNames = new Set();
+                    const uniqueSubSubcats = [];
                     subSubcats.forEach(ss => {
-                        const ssItems = subItems.filter(item => item.subSubcategory === ss.name);
+                        const lower = (ss.name || '').toLowerCase();
+                        if (!seenSsNames.has(lower)) {
+                            seenSsNames.add(lower);
+                            uniqueSubSubcats.push(ss);
+                        }
+                    });
+
+                    uniqueSubSubcats.forEach(ss => {
+                        ssCounter++; // Increment across ALL sub-subcategories in category
+                        const ssLower = (ss.name || '').toLowerCase();
+                        const ssItems = subItems.filter(item => (item.subSubcategory || '').toLowerCase() === ssLower);
                         const escSsName = String(ss.name).replace(/'/g, '\\\'');
                         const escSsSub = String(ss.subcategory).replace(/'/g, '\\\'');
                         const escSsCat = String(ss.category).replace(/'/g, '\\\'');
 
-                        // Sub-subcategory header row (1, 2, 3... matches subcategory letter position)
+                        // Sub-subcategory header row (1, 2, 3... continuous across category)
                         const ssRow = document.createElement('tr');
                         ssRow.className = 'records-subsub-header';
                         const ssActions = isArchiveView ? '' : `
@@ -1643,25 +1855,26 @@ function renderRecords() {
                         ssRow.innerHTML = `
                             <td colspan="10" class="records-subsub-cell">
                                 <div style="display:flex;align-items:center;justify-content:space-between;">
-                                    <span>${subSubNum}. ${ss.name}</span>
+                                    <span>${ssCounter}. ${ss.name}</span>
                                     ${ssActions}
                                 </div>
                             </td>
                         `;
                         tbody.appendChild(ssRow);
 
-                        // Items under this sub-subcategory (1.1, 1.2 / 2.1, 2.2 / 3.1, 3.2...)
+                        // Items under this sub-subcategory restart at .1 (e.g. 2.1, 2.2, 3.1, 3.2)
+                        let ssItemIdx = 1;
                         ssItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
-                            itemIdx++;
+                            renderRecordItemRow(tbody, item, ssCounter, ssItemIdx);
+                            ssItemIdx++;
                         });
                     });
 
-                    // Items with no sub-subcategory under this subcategory — continue numbering
+                    // Items with no sub-subcategory under this subcategory — continue numbering from last subSubNum
                     const noSsItems = subItems.filter(item => !item.subSubcategory);
                     if (noSsItems.length > 0) {
                         noSsItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
                             itemIdx++;
                         });
                     }
@@ -1669,7 +1882,7 @@ function renderRecords() {
                     // No registered sub-subcategories — items numbered with subSubNum prefix
                     if (subItems.length > 0) {
                         subItems.forEach(item => {
-                            renderRecordItemRow(tbody, item, subSubNum, itemIdx, isArchiveView);
+                            renderRecordItemRow(tbody, item, subSubNum, itemIdx);
                             itemIdx++;
                         });
                     }
@@ -1678,12 +1891,13 @@ function renderRecords() {
                 lastItemIdx = itemIdx;
             });
 
-            // Items with no subcategory at all — continue from last subcategory number
+            // Items with no subcategory at all — continue from last used number
             const noSubItems = catItems.filter(item => !item.subcategory);
             if (noSubItems.length > 0) {
                 let itemIdx = lastItemIdx;
+                const continueNum = Math.max(lastSubSubNum, ssCounter);
                 noSubItems.forEach(item => {
-                    renderRecordItemRow(tbody, item, lastSubSubNum, itemIdx, isArchiveView);
+                    renderRecordItemRow(tbody, item, continueNum, itemIdx);
                     itemIdx++;
                 });
             }
@@ -1691,7 +1905,7 @@ function renderRecords() {
             // No registered subcategories — just list items with plain numbers
             let itemIdx = 1;
             catItems.forEach(item => {
-                renderRecordItemRow(tbody, item, itemIdx, '', isArchiveView);
+                renderRecordItemRow(tbody, item, itemIdx, '');
                 itemIdx++;
             });
         }
@@ -1699,7 +1913,8 @@ function renderRecords() {
 }
 
 function openEditModal(id) {
-    const inventory = getInventory();
+    const isArchiveView = currentArea !== 'current' && archiveViewCache;
+    const inventory = isArchiveView ? archiveViewCache.items : getInventory();
     const item = inventory.find(i => i.id === id);
     if (!item) return;
 
@@ -1765,50 +1980,104 @@ async function saveEdit() {
         return;
     }
 
+    const isArchiveView = currentArea !== 'current' && archiveViewCache;
+
     try {
-        const res = await fetch(`${API_BASE}/inventory/${originalId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: originalId, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
-        });
+        let res;
+        if (isArchiveView) {
+            res = await fetch(`${API_BASE}/archives/${currentArea}/items/${originalId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: originalId, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            });
+        } else {
+            res = await fetch(`${API_BASE}/inventory/${originalId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: originalId, name, category, subcategory, subSubcategory, unit, quantityPerPhysicalCount, frequencyAsPerDO, dateLastCalibrated, scheduleDateOfNextCalibration, remarks })
+            });
+        }
         if (!res.ok) {
             const err = await res.json();
             alert(err.error || 'Failed to update material. Check that the backend is running.');
             return;
         }
-        if (subcategory) await registerSubcategory(subcategory, category);
-        if (subSubcategory) await registerSubsubcategory(subSubcategory, subcategory, category);
+        if (!isArchiveView) {
+            if (subcategory) await registerSubcategory(subcategory, category);
+            if (subSubcategory) await registerSubsubcategory(subSubcategory, subcategory, category);
+            await syncSubcategories();
+            await syncSubsubcategories();
+            await syncInventory();
+        } else {
+            // Refresh archive data after editing
+            const archiveRes = await fetch(`${API_BASE}/archives/${currentArea}`);
+            if (archiveRes.ok) {
+                archiveViewCache = await archiveRes.json();
+            }
+            renderRecords();
+        }
         closeEditModal();
-        await syncSubcategories();
-        await syncSubsubcategories();
-        await syncInventory();
     } catch (error) {
         alert('Failed to update material. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
         showBackendWarning();
     }
 }
 
-function deleteFromRecords(id) {
-    deleteMaterial(id);
+async function deleteFromRecords(id) {
+    const isArchiveView = currentArea !== 'current' && archiveViewCache;
+    if (isArchiveView) {
+        await deleteArchiveItem(id);
+    } else {
+        await deleteMaterial(id);
+    }
+}
+
+async function deleteArchiveItem(id) {
+    if (confirm('Are you sure you want to delete this item from the archive?')) {
+        try {
+            console.log('Deleting archive item:', id, 'from archive:', currentArea);
+            const res = await fetch(`${API_BASE}/archives/${currentArea}/items/${id}`, { method: 'DELETE' });
+            console.log('Archive delete response status:', res.status);
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.error || 'Failed to delete archive item. Check that the backend is running.');
+                return;
+            }
+            const data = await res.json();
+            console.log('Archive delete response:', data);
+            // Add deleted item directly to trash cache so it appears immediately
+            if (data.item) {
+                trashCache.push(data.item);
+            }
+            // Refresh archive data after deleting
+            const archiveRes = await fetch(`${API_BASE}/archives/${currentArea}`);
+            if (archiveRes.ok) {
+                archiveViewCache = await archiveRes.json();
+            }
+            renderRecords();
+            await syncTrash();
+            console.log('Trash after archive delete:', trashCache);
+            // If trash modal is open, refresh it
+            const trashModal = document.getElementById('trash-modal');
+            if (trashModal && trashModal.style.display === 'flex') {
+                renderTrashList();
+            }
+        } catch (error) {
+            console.error('Archive delete error:', error);
+            alert('Failed to delete archive item. Backend is not running.\n\nTo fix:\n1. Open Command Prompt\n2. Type: cd Backend && npm start\n3. Then refresh this page.');
+            showBackendWarning();
+        }
+    }
 }
 
 function printRecords() {
-    const yearSelect = document.getElementById('records-year');
     const searchInput = document.getElementById('records-search');
     const categoryFilter = document.getElementById('records-category-filter');
-    const selectedYear = yearSelect ? yearSelect.value : 'all';
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
+    const isArchiveView = currentArea !== 'current' && archiveViewCache;
 
-    let inventory = getInventory();
-
-    if (selectedYear !== 'all') {
-        const yearNum = parseInt(selectedYear);
-        inventory = inventory.filter(item => {
-            if (!item.createdAt) return false;
-            return new Date(item.createdAt).getFullYear() === yearNum;
-        });
-    }
+    let inventory = isArchiveView ? archiveViewCache.items : getInventory();
 
     if (selectedCategory !== 'all') {
         inventory = inventory.filter(item => item.category === selectedCategory);
@@ -1824,14 +2093,25 @@ function printRecords() {
         );
     }
 
+    // Sort by creation time: oldest first
+    inventory = inventory.slice().sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return ta - tb;
+    });
+
     // Read print settings
     const orientationSelect = document.getElementById('print-orientation');
     const colorSelect = document.getElementById('print-color');
+    const preparedName = document.getElementById('print-prepared-name')?.value.trim() || '';
+    const preparedPosition = document.getElementById('print-prepared-position')?.value.trim() || '';
+    const checkedName = document.getElementById('print-checked-name')?.value.trim() || '';
+    const checkedPosition = document.getElementById('print-checked-position')?.value.trim() || '';
     const orientation = orientationSelect ? orientationSelect.value : 'portrait';
     const colorMode = colorSelect ? colorSelect.value : 'color';
 
     // Build print HTML inside a hidden iframe for reliable rendering
-    const printHTML = buildPrintHTML(inventory, orientation, colorMode);
+    const printHTML = buildPrintHTML(inventory, orientation, colorMode, preparedName, preparedPosition, checkedName, checkedPosition);
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.top = '0';
@@ -1859,7 +2139,7 @@ function printRecords() {
     }, 300);
 }
 
-function buildPrintHTML(inventory, orientation, colorMode) {
+function buildPrintHTML(inventory, orientation, colorMode, preparedName, preparedPosition, checkedName, checkedPosition) {
     const isPortrait = orientation === 'portrait';
     const isBW = colorMode === 'bw';
 
@@ -1879,15 +2159,32 @@ function buildPrintHTML(inventory, orientation, colorMode) {
         Object.keys(grouped).sort().forEach(cat => {
             rowsHTML += `<tr><td colspan="9" class="category-header">${cat.toUpperCase()}</td></tr>`;
 
-            const catItems = grouped[cat];
+            const catItems = (grouped[cat] || []).slice().sort((a, b) => {
+                const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return ta - tb;
+            });
             const catSubs = subcategoriesCache
                 .filter(s => s.category === cat);
 
             if (catSubs.length > 0) {
                 let subLetterCode = 65; // 'A'
+                let ssCounter = 0; // Running counter for sub-subcategories across entire category
 
+                // Deduplicate subcategories by name (case-insensitive), keep first occurrence
+                const seenSubNames = new Set();
+                const uniqueCatSubs = [];
                 catSubs.forEach(sub => {
-                    const subItems = catItems.filter(item => item.subcategory === sub.name);
+                    const lower = (sub.name || '').toLowerCase();
+                    if (!seenSubNames.has(lower)) {
+                        seenSubNames.add(lower);
+                        uniqueCatSubs.push(sub);
+                    }
+                });
+
+                uniqueCatSubs.forEach(sub => {
+                    const subLower = (sub.name || '').toLowerCase();
+                    const subItems = catItems.filter(item => (item.subcategory || '').toLowerCase() === subLower);
                     rowsHTML += `<tr><td colspan="9" class="subcategory-header">${String.fromCharCode(subLetterCode)}. ${escapeHtml(sub.name)}</td></tr>`;
                     subLetterCode++;
 
@@ -1895,11 +2192,22 @@ function buildPrintHTML(inventory, orientation, colorMode) {
                         .filter(ss => ss.subcategory === sub.name && ss.category === cat);
 
                     if (subSubcats.length > 0) {
-                        let subSubNum = 1;
+                        // Deduplicate sub-subcategories by name (case-insensitive), keep first occurrence
+                        const seenSsNames = new Set();
+                        const uniqueSubSubcats = [];
                         subSubcats.forEach(ss => {
-                            const ssItems = subItems.filter(item => item.subSubcategory === ss.name);
-                            rowsHTML += `<tr><td colspan="9" class="subsubcategory-header">${subSubNum}. ${escapeHtml(ss.name)}</td></tr>`;
-                            subSubNum++;
+                            const lower = (ss.name || '').toLowerCase();
+                            if (!seenSsNames.has(lower)) {
+                                seenSsNames.add(lower);
+                                uniqueSubSubcats.push(ss);
+                            }
+                        });
+
+                        uniqueSubSubcats.forEach(ss => {
+                            ssCounter++;
+                            const ssLower = (ss.name || '').toLowerCase();
+                            const ssItems = subItems.filter(item => (item.subSubcategory || '').toLowerCase() === ssLower);
+                            rowsHTML += `<tr><td colspan="9" class="subsubcategory-header">${ssCounter}. ${escapeHtml(ss.name)}</td></tr>`;
 
                             let itemIdx = 1;
                             ssItems.forEach(item => {
@@ -2048,6 +2356,11 @@ body { font-family: Georgia, serif; font-size: 8pt; margin: 0; padding: 0; backg
 .print-checklist thead tr:first-child th:nth-child(5) { width: 14%; }
 .print-checklist thead tr:nth-child(2) th { width: 6.6%; }
 .print-checklist td.date-cell { white-space: nowrap; font-size: 6pt; }
+.print-footer { display: flex; justify-content: space-between; margin-top: 14px; padding: 0 4px; }
+.signatory-box { text-align: center; width: 45%; }
+.signatory-label { font-weight: 700; font-size: 7pt; text-transform: uppercase; margin-bottom: 18px; letter-spacing: 0.3px; }
+.signatory-name { border-bottom: 1px solid #000; padding-bottom: 2px; font-weight: 700; font-size: 8pt; margin: 0 0 1px; min-height: 14px; }
+.signatory-position { font-size: 6.5pt; margin: 1px 0 0; font-style: italic; color: #333; }
 `;
 
     // Landscape: more spacious layout
@@ -2072,6 +2385,11 @@ body { font-family: Georgia, serif; font-size: 10pt; margin: 0; padding: 0; back
 .print-checklist thead tr:first-child th:nth-child(5) { width: 16%; }
 .print-checklist thead tr:nth-child(2) th { width: 7%; }
 .print-checklist td.date-cell { white-space: nowrap; }
+.print-footer { display: flex; justify-content: space-between; margin-top: 24px; padding: 0 6px; }
+.signatory-box { text-align: center; width: 45%; }
+.signatory-label { font-weight: 700; font-size: 9pt; text-transform: uppercase; margin-bottom: 28px; letter-spacing: 0.3px; }
+.signatory-name { border-bottom: 1.5px solid #000; padding-bottom: 3px; font-weight: 700; font-size: 10pt; margin: 0 0 2px; min-height: 18px; }
+.signatory-position { font-size: 8pt; margin: 2px 0 0; font-style: italic; color: #333; }
 `;
 
     const css = isPortrait ? portraitCSS : landscapeCSS;
@@ -2117,6 +2435,21 @@ ${css}
         ${rowsHTML}
     </tbody>
 </table>
+
+<!-- Footer Signatories -->
+<div class="print-footer">
+    <div class="signatory-box">
+        <p class="signatory-label">Prepared by:</p>
+        <p class="signatory-name">${escapeHtml(preparedName) || '&nbsp;'}</p>
+        <p class="signatory-position">${escapeHtml(preparedPosition) || '&nbsp;'}</p>
+    </div>
+    <div class="signatory-box">
+        <p class="signatory-label">Checked by:</p>
+        <p class="signatory-name">${escapeHtml(checkedName) || '&nbsp;'}</p>
+        <p class="signatory-position">${escapeHtml(checkedPosition) || '&nbsp;'}</p>
+    </div>
+</div>
+
 </body>
 </html>`;
 }
@@ -2165,7 +2498,7 @@ function toggleTaskCompletion(itemId, type, dateStr) {
 }
 
 function getPendingTasks() {
-    const inventory = getInventory();
+    const inventory = getDashboardData();
     const tasks = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);

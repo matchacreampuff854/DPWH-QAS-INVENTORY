@@ -73,13 +73,22 @@
                 <button id="search-btn" class="btn btn-secondary">Search</button>
             </div>
 
+            <div class="dashboard-filters">
+                <div class="filter-group">
+                    <label for="dashboard-area-filter">Inventory File</label>
+                    <select id="dashboard-area-filter">
+                        <option value="current">Current</option>
+                    </select>
+                </div>
+            </div>
+
             <section class="metrics-grid">
                 <article class="metric-card">
                     <div>
                         <span class="metric-title">Total Materials</span>
                         <strong id="total-materials">0</strong>
                     </div>
-                    <p>All inventory items</p>
+                    <p id="total-materials-label">All inventory items</p>
                 </article>
                 <article class="metric-card">
                     <div>
@@ -295,9 +304,7 @@
                             <select id="records-category-filter">
                                 <option value="all">All Categories</option>
                             </select>
-                            <select id="records-year">
-                                <option value="all">All Years</option>
-                            </select>
+                            <button type="button" id="trash-btn" class="btn btn-secondary trash-btn" onclick="openTrashModal()" title="Trash Bin">🗑️</button>
                         </div>
                     </div>
 
@@ -437,6 +444,23 @@
                 </div>
             </div>
 
+            <!-- Trash Bin Modal -->
+            <div id="trash-modal" class="modal" style="display: none;">
+                <div class="modal-overlay" onclick="closeTrashModal()"></div>
+                <div class="modal-content popup-modal" style="max-width: 600px;">
+                    <button type="button" class="modal-close" onclick="closeTrashModal()">&times;</button>
+                    <h3>🗑️ Trash Bin</h3>
+                    <p class="modal-subtitle">Deleted items can be restored here.</p>
+                    <div id="trash-list" class="trash-list">
+                        <p style="color: var(--muted);">No deleted items.</p>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="refreshTrash()">🔄 Refresh</button>
+                        <button type="button" class="btn btn-tertiary" onclick="closeTrashModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Print Settings Modal -->
             <div id="print-modal" class="modal" style="display: none;">
                 <div class="modal-overlay" onclick="closePrintModal()"></div>
@@ -457,6 +481,25 @@
                             <option value="color" selected>Color (Default)</option>
                             <option value="bw">Black &amp; White</option>
                         </select>
+                    </div>
+                    <div style="border-top: 1px solid rgba(15,79,168,0.12); margin-top: 16px; padding-top: 16px;">
+                        <h4 style="margin-bottom: 12px; color: var(--text);">Footer Signatories</h4>
+                        <div class="form-group">
+                            <label for="print-prepared-name">Prepared By — Name</label>
+                            <input type="text" id="print-prepared-name" placeholder="e.g. LEONARDO S. DELA CRUZ">
+                        </div>
+                        <div class="form-group">
+                            <label for="print-prepared-position">Prepared By — Position</label>
+                            <input type="text" id="print-prepared-position" placeholder="e.g. Laboratory Technician II">
+                        </div>
+                        <div class="form-group">
+                            <label for="print-checked-name">Checked By — Name</label>
+                            <input type="text" id="print-checked-name" placeholder="e.g. NORBERTO L SANTOS">
+                        </div>
+                        <div class="form-group">
+                            <label for="print-checked-position">Checked By — Position</label>
+                            <input type="text" id="print-checked-position" placeholder="e.g. Chief, Q.A.S.">
+                        </div>
                     </div>
                     <div class="modal-actions">
                         <button type="button" class="btn btn-tertiary" onclick="closePrintModal()">Cancel</button>
@@ -557,6 +600,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js?v=17"></script>
+    <script src="script.js?v=38"></script>
+    <div id="version-footer" style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#94a3b8;z-index:9999;">v38</div>
 </body>
 </html>

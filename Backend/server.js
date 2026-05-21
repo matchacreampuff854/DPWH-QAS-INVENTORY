@@ -9,12 +9,21 @@ const DATA_FILE = path.join(__dirname, 'data', 'inventory.json');
 const SUBCATEGORIES_FILE = path.join(__dirname, 'data', 'subcategories.json');
 const SUBSUBCATEGORIES_FILE = path.join(__dirname, 'data', 'subsubcategories.json');
 const ARCHIVES_FILE = path.join(__dirname, 'data', 'archives.json');
+const TRASH_FILE = path.join(__dirname, 'data', 'trash.json');
 
 app.use(cors());
 app.use(express.json());
 
 // Serve static files from the parent directory (where index.html, app.html are)
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '..'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html') || path.endsWith('.js') || path.endsWith('.css')) {
+            res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.set('Pragma', 'no-cache');
+            res.set('Expires', '0');
+        }
+    }
+}));
 
 // Ensure data file exists
 function ensureDataFile() {
@@ -101,6 +110,27 @@ function writeArchives(archives) {
     fs.writeFileSync(ARCHIVES_FILE, JSON.stringify(archives, null, 2));
 }
 
+function ensureTrashFile() {
+    const dir = path.dirname(TRASH_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(TRASH_FILE)) {
+        fs.writeFileSync(TRASH_FILE, JSON.stringify([], null, 2));
+    }
+}
+
+function readTrash() {
+    ensureTrashFile();
+    const data = fs.readFileSync(TRASH_FILE, 'utf8');
+    return JSON.parse(data);
+}
+
+function writeTrash(trash) {
+    ensureTrashFile();
+    fs.writeFileSync(TRASH_FILE, JSON.stringify(trash, null, 2));
+}
+
 // GET all inventory items
 app.get('/api/inventory', (req, res) => {
     try {
@@ -140,11 +170,6 @@ app.post('/api/inventory', (req, res) => {
         const existingItem = inventory.find(item => item.id === id);
         if (existingItem) {
             return res.status(409).json({ error: 'Item ID already exists' });
-        }
-
-        const duplicateName = inventory.find(item => item.name && item.name.trim().toLowerCase() === name.trim().toLowerCase());
-        if (duplicateName) {
-            return res.status(409).json({ error: `An item named "${duplicateName.name}" already exists in the inventory.` });
         }
 
         const newItem = {
@@ -207,21 +232,103 @@ app.put('/api/inventory/:id', (req, res) => {
     }
 });
 
-// DELETE inventory item by ID
+// DELETE inventory item by ID (move to trash)
 app.delete('/api/inventory/:id', (req, res) => {
     try {
         const { id } = req.params;
         const inventory = readInventory();
-        const updatedInventory = inventory.filter(item => item.id !== id);
+        const item = inventory.find(item => item.id === id);
 
-        if (updatedInventory.length === inventory.length) {
+        if (!item) {
             return res.status(404).json({ error: 'Item not found' });
         }
 
+        // Remove from inventory
+        const updatedInventory = inventory.filter(i => i.id !== id);
         writeInventory(updatedInventory);
-        res.json({ message: 'Item deleted successfully' });
+
+        // Move to trash
+        const trash = readTrash();
+        trash.push({ ...item, deletedAt: new Date().toISOString() });
+        writeTrash(trash);
+
+        res.json({ message: 'Item moved to trash', item: { ...item, deletedAt: new Date().toISOString() } });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete inventory item' });
+    }
+});
+
+// GET trash items
+app.get('/api/trash', (req, res) => {
+    try {
+        const trash = readTrash();
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        res.json(trash);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read trash' });
+    }
+});
+
+// POST fetch trash (alternative to GET for cache-busting)
+app.post('/api/trash/fetch', (req, res) => {
+    try {
+        const trash = readTrash();
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        res.json(trash);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read trash' });
+    }
+});
+
+// POST restore item from trash
+app.post('/api/trash/restore/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const trash = readTrash();
+        const itemIndex = trash.findIndex(item => item.id === id);
+
+        if (itemIndex === -1) {
+            return res.status(404).json({ error: 'Item not found in trash' });
+        }
+
+        const item = trash[itemIndex];
+        delete item.deletedAt;
+
+        // Add back to inventory
+        const inventory = readInventory();
+        inventory.push(item);
+        writeInventory(inventory);
+
+        // Remove from trash
+        trash.splice(itemIndex, 1);
+        writeTrash(trash);
+
+        res.json({ message: 'Item restored successfully', item });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to restore item' });
+    }
+});
+
+// DELETE permanently remove from trash
+app.delete('/api/trash/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        let trash = readTrash();
+        const index = trash.findIndex(item => item.id === id);
+
+        if (index === -1) {
+            return res.status(404).json({ error: 'Item not found in trash' });
+        }
+
+        trash.splice(index, 1);
+        writeTrash(trash);
+        res.json({ message: 'Item permanently deleted' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete from trash' });
     }
 });
 
@@ -243,7 +350,7 @@ app.post('/api/subcategories', (req, res) => {
             return res.status(400).json({ error: 'Name and category are required' });
         }
         const subcategories = readSubcategories();
-        const exists = subcategories.find(s => s.name === name && s.category === category);
+        const exists = subcategories.find(s => s.name.toLowerCase() === name.toLowerCase() && s.category.toLowerCase() === category.toLowerCase());
         if (exists) {
             return res.status(409).json({ error: 'Subcategory already exists' });
         }
@@ -335,7 +442,7 @@ app.post('/api/subsubcategories', (req, res) => {
             return res.status(400).json({ error: 'Name, subcategory, and category are required' });
         }
         const subsubcategories = readSubsubcategories();
-        const exists = subsubcategories.find(s => s.name === name && s.subcategory === subcategory && s.category === category);
+        const exists = subsubcategories.find(s => s.name.toLowerCase() === name.toLowerCase() && s.subcategory.toLowerCase() === subcategory.toLowerCase() && s.category.toLowerCase() === category.toLowerCase());
         if (exists) {
             return res.status(409).json({ error: 'Sub-subcategory already exists' });
         }
@@ -432,7 +539,7 @@ app.get('/api/archives/:id', (req, res) => {
     }
 });
 
-// POST create archive: snapshot inventory, then reset current inventory
+// POST create archive: snapshot inventory, leave current inventory untouched
 app.post('/api/archives', (req, res) => {
     try {
         const { name } = req.body;
@@ -455,20 +562,62 @@ app.post('/api/archives', (req, res) => {
         archives.push(archive);
         writeArchives(archives);
 
-        // Reset current inventory: keep template fields, clear inspection data
-        const resetInventory = inventory.map(item => ({
-            ...item,
-            quantityPerPhysicalCount: { functioning: '', notFunctioning: '', none: '' },
-            frequencyAsPerDO: null,
-            dateLastCalibrated: null,
-            scheduleDateOfNextCalibration: null,
-            remarks: null
-        }));
-        writeInventory(resetInventory);
+        // Current inventory is NOT reset — all data (quantities, dates, remarks) is preserved
+        // so the Dashboard continues to show the latest data
 
         res.status(201).json(archive);
     } catch (error) {
         res.status(500).json({ error: 'Failed to create archive' });
+    }
+});
+
+// PUT update item within an archive
+app.put('/api/archives/:archiveId/items/:itemId', (req, res) => {
+    try {
+        const archives = readArchives();
+        const archive = archives.find(a => a.id === req.params.archiveId);
+        if (!archive) {
+            return res.status(404).json({ error: 'Archive not found' });
+        }
+        const itemIndex = archive.items.findIndex(i => i.id === req.params.itemId);
+        if (itemIndex === -1) {
+            return res.status(404).json({ error: 'Item not found in archive' });
+        }
+        const updatedItem = { ...archive.items[itemIndex], ...req.body };
+        archive.items[itemIndex] = updatedItem;
+        writeArchives(archives);
+        res.json(updatedItem);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update archive item' });
+    }
+});
+
+// DELETE item from an archive (moves to trash)
+app.delete('/api/archives/:archiveId/items/:itemId', (req, res) => {
+    try {
+        const archives = readArchives();
+        const archive = archives.find(a => a.id === req.params.archiveId);
+        if (!archive) {
+            return res.status(404).json({ error: 'Archive not found' });
+        }
+        const itemIndex = archive.items.findIndex(i => i.id === req.params.itemId);
+        if (itemIndex === -1) {
+            return res.status(404).json({ error: 'Item not found in archive' });
+        }
+        const item = archive.items[itemIndex];
+
+        // Remove from archive
+        archive.items.splice(itemIndex, 1);
+        writeArchives(archives);
+
+        // Move to trash
+        const trash = readTrash();
+        trash.push({ ...item, deletedAt: new Date().toISOString(), archiveId: req.params.archiveId, archiveName: archive.name });
+        writeTrash(trash);
+
+        res.json({ message: 'Item moved to trash', item: { ...item, deletedAt: new Date().toISOString(), archiveId: req.params.archiveId, archiveName: archive.name } });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete archive item' });
     }
 });
 
@@ -492,9 +641,6 @@ app.delete('/api/archives/:id', (req, res) => {
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// Serve static frontend files
-app.use(express.static(path.join(__dirname, '..')));
 
 const os = require('os');
 function getLocalIP() {
